@@ -1,0 +1,13 @@
+---
+Checks: "-*,\
+  bugprone-*,\
+  cert-*,\
+  clang-analyzer-*,\
+  concurrency-*,\
+  linuxkernel-*,\
+  llvm-*,\
+  misc-*,\
+  modernize-*,\
+  performance-*,\
+  portability-*,\
+  readability-*"

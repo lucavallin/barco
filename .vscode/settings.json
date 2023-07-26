@@ -1,0 +1,6 @@
+{
+    "C_Cpp.codeAnalysis.clangTidy.args": [
+        "-std=c18"
+    ],
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true
+}
