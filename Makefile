@@ -2,7 +2,6 @@
 debug ?= 0
 SRC_DIR := ./src
 BUILD_DIR := ./build
-BIN_DIR := ./bin
 BIN := barco
 OBJS := $(BIN).o
 
@@ -24,18 +23,18 @@ endif
 all: clean $(BIN)
 
 $(BIN): dir $(OBJS)
-	$(CC) $(CFLAGS) -o $(BIN_DIR)/$(BIN) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file))
+	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(BIN) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file))
 
 %.o: dir $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$*.o -c $(SRC_DIR)/$*.c
+	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$*.o -c $(SRC_DIR)/$*.c
 
 # -- Utility targets --
 dir:
 	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(BIN_DIR)
+	@mkdir -p $(BUILD_DIR)
 
 lint:
-	@find $(SRC_DIR) -regex '.*\.\(c\|h\)' -exec clang-tidy --header-filter=.* --extra-arg="$(C_VERSION_FLAG)" {} \;
+	@find $(SRC_DIR) -regex '.*\.\(c\|h\)' -exec clang-tidy --header-filter=.* --extra-arg=$(C_VERSION_FLAG) {} \;
 
 format:
 	@find $(SRC_DIR) -regex '.*\.\(c\|h\)' -exec clang-format -style=file -i {} \;

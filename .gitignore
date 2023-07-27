@@ -52,5 +52,4 @@ Mkfile.old
 dkms.conf
 
 # Barco
-bin
-obj
+build

@@ -1,13 +1,11 @@
 #!/bin/bash
 
-# Update apt
-sudo apt update
+# Install build tools
+sudo $CODESPACE_VSCODE_FOLDER/scripts/install.sh
 
-# Install Clang tools
+# Install development tools
 sudo apt install -y \
-    clang \
-    clang-tidy \
-    clang-format \
     lldb \
     clangd \
-    valgrind
+    valgrind \
+    binutils
