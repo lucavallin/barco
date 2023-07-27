@@ -4,28 +4,49 @@ Linux containers in C for educational purposes.
 
 ## Usage
 
+`barco` can be used to run `bin/sh` in the [busybox image](./data/img/busybox) as `root`:
+
+```bash
+$ sudo ./barco -m ./data/img/busybox -u 0 -c /bin/sh
+```
+
+## Setup
+GitHub Codespaces is configured automatically with all the tools needed for developing and building the project.
+In other environments (GitHub Actions, local...), the following script must be run before building the project:
+
+```bash
+# Install the tools
+$ sudo ./scripts/install.sh
+```
+The script installs the required tools and the following dependencies:
+
+- `libseccomp-dev`
+- `libcap-dev`
+
+## Build
+
 The included `Makefile` provides a few targets to build, run, debug and inspect the program.
 
 ```bash
 # Build the program
-make
+$ make
 # Build the program with debug flags
-make debug=1
+$ make debug=1
 ...
 # Setup build directory
-make dir
+$ make dir
 # Lint the code
-make lint
+$ make lint
 # Format the code
-make format
+$ make format
 # Run valgrind
-make valgrind
+$ make valgrind
 # Run the lldb debugger
-make debugger
+$ make debugger
 # Run objdump
-make objdump
+$ make objdump
 # Clean the build
-make clean
+$ make clean
 ```
 
 The variable `debug` can be set to `1` to run any of the targets in "debug" mode. This is especially useful for the debugger, valgrind and objdump.
@@ -49,3 +70,4 @@ The project is developed using the following tools, which are installed by defau
 
 At the moment, the project does not contain any automated tests or tools to document the code.
 In the future, suitable tools for automated testing and documentation might be added.
+

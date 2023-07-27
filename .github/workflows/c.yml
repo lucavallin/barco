@@ -12,7 +12,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: make lint
+      - name: install build tools
+        run: sudo scripts/install-build-tools.sh
+      - name: install dependencies
+        run: sudo scripts/install-dependencies.sh
+      - name: run linter
         run: make lint
-      - name: make
+      - name: compile
         run: make
