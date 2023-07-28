@@ -1,4 +1,5 @@
 ---
+ExtraArgs: ["-std=gnu17"]
 Checks: "-*,\
   bugprone-*,\
   cert-*,\
