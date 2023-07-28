@@ -1,10 +1,10 @@
-#include "hostname.h"
-#include <cstddef>
+#include "../include/hostname.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-void hostname_generate(char *hostname, size_t len) {
+void hostname_generate(char *hostname) {
+  int len = sizeof(hostname);
   char chars[] =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
 

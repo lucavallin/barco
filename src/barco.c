@@ -1,47 +1,39 @@
-#include <errno.h>
-#include <fcntl.h>
+#include "../include/cgroup.h"
+#include "../include/container.h"
+#include "../include/hostname.h"
+#include "../include/namespace.h"
 #include <getopt.h>
-#include <grp.h>
-#include <linux/capability.h>
-#include <linux/limits.h>
-#include <pwd.h>
-#include <sched.h>
-#include <seccomp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/capability.h>
-#include <sys/mount.h>
-#include <sys/prctl.h>
-#include <sys/resource.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/syscall.h>
-#include <sys/utsname.h>
-#include <sys/wait.h>
-#include <time.h>
-#include <unistd.h>
 
-struct child_config {
-  int argc;
-  uid_t uid;
-  int fd;
-  char *hostname;
-  char **argv;
-  char *mount_dir;
-};
-
-#define STRTOL_BASE 10
+// BASE_10 is the base of the number system,
+// used to convert a string to a number.
+#define BASE_10 10
 
 int main(int argc, char **argv) {
-  struct child_config config = {0};
-  int err = 0;
-  int option = 0;
-  int sockets[2] = {0};
-  int last_optind = 0;
+  // used for strto* functions
   char *endptr;
+  // used for container stack
+  char *stack = 0;
+  // used for container hostname
+  char hostname[HOSTNAME_LEN];
+  // used for container config
+  container_config config = {0};
+  // used for container pid
+  int container_pid = 0;
+  // return status of barco
+  int err = 0;
+  // used for parsing arguments to barco
+  int last_optind = 0;
+  // used for parsing arguments to barco
+  int option = 0;
+  // socket pair used for communication between barco and container
+  int sockets[2] = {0};
+  // used for parsing arguments to barco
   long int result = 0;
 
+  // Parse arguments
   while ((option = getopt(argc, argv, "c:m:u:"))) {
     switch (option) {
     case 'c':
@@ -54,7 +46,7 @@ int main(int argc, char **argv) {
       break;
 
     case 'u':
-      result = strtol(optarg, &endptr, STRTOL_BASE);
+      result = strtol(optarg, &endptr, BASE_10);
 
       // Check for errors in conversion
       if (*endptr != '\0' || endptr == optarg) {
@@ -72,34 +64,84 @@ int main(int argc, char **argv) {
     last_optind = optind;
   }
 
+  // Check that we have all the arguments we need
 finish_options:
   if (!config.argc || !config.mount_dir) {
     goto usage;
   }
 
-  // check-linux-version
+  // Here we could check that the Linux version is between 4.7.x and 4.8.x on
+  // x86_64 with e.g. version_check() in src/version.c. Since we might want to
+  // block system calls and capabilities, we need to make sure there aren't new
+  // ones.
 
-  // hostname
+  // Set hostname for the container to a random string
+  hostname_generate(hostname);
+  config.hostname = hostname;
 
-  // namespaces
+  // Initialize a socket pair to communicate with the container
+  if (namespace_socket_pair_init(sockets) != 0) {
+    fprintf(stderr, "=> namespace_socket_pair_init failed\n");
+    goto error;
+  }
+  config.fd = sockets[1];
 
+  // Initialize a stack for the container
+  if (namespace_stack_init(&stack) != 0) {
+    fprintf(stderr, "=> namespace_stack_init failed\n");
+    goto error;
+  }
+
+  // Prepare cgroup for the process tree (the container is a child of the
+  // barco process)
+  if (cgroup_init(&config)) {
+    err = 1;
+    goto cleanup;
+  }
+
+  // Initialize the container (calls clone() internally)
+  container_pid = container_init(&config, stack);
+  if (container_pid == -1) {
+    fprintf(stderr, "=> container_init failed\n");
+    err = 1;
+    goto cleanup;
+  }
+
+  // Configures the container's user namespace and
+  // pause until its process tree exits
+  if (namespace_handle_container_uid_map(container_pid, sockets[0])) {
+    err = 1;
+    goto stop_and_destroy_container;
+  }
+
+  goto destroy_container;
+
+  // Stop and destroy the container
+stop_and_destroy_container:
+  if (container_pid) {
+    container_stop(container_pid);
+  }
+
+  // Destroy the container
+destroy_container:
+  err |= container_destroy(container_pid);
+
+  // Clear resources (cgroup, stack, sockets)
+cleanup:
+  cgroup_free(&config);
+  free(stack);
+  namespace_socket_pair_close(sockets);
   goto exit;
 
+  // Print usage information
 usage:
   fprintf(stderr, "Usage: %s -u -1 -m . -c /bin/sh ~\n", argv[0]);
-  goto error;
 
+  // Set error status
 error:
   err = 1;
 
+  // Exit program
 exit:
-  if (sockets[0]) {
-    close(sockets[0]);
-  }
-
-  if (sockets[1]) {
-    close(sockets[1]);
-  }
-
   return err;
 }
