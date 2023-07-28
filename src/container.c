@@ -4,8 +4,6 @@
 #include "../include/namespace.h"
 #include <errno.h>
 #include <grp.h>
-#include <linux/capability.h>
-#include <linux/sched.h>
 #include <sched.h>
 #include <seccomp.h>
 #include <signal.h>

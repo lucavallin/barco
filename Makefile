@@ -16,8 +16,8 @@ LIB_LOG_PATH := $(LIB_DIR)/log.c/src/log.c
 
 # -- Compiler Settings --
 CC := clang
-C_VERSION := gnu17
-CFLAGS := -std=$(C_VERSION) -Wall -Wextra -pedantic -pedantic-errors
+CLIBS := -lcap -lseccomp
+CFLAGS := -std=gnu17 -Wall -Wextra -pedantic -pedantic-errors
 
 # -- Debug Settings --
 ifeq ($(debug), 1)
@@ -30,7 +30,7 @@ endif
 
 ## -- Build barco executable --
 $(BIN): dir libs $(OBJS)
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(BIN) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file))
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(BIN) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file)) $(CLIBS)
 
 ## -- Build object files --
 %.o: dir $(SRC_DIR)/%.c

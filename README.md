@@ -132,3 +132,5 @@ In the future, suitable tools for automated testing and documentation might be a
 - [ ] Use CMake and Vcpkg
 - [ ] Remove unused includes
 - [ ] Ensure only functions meant to be public are exposed
+- [ ] Ensure no cross-module dependencies
+- [ ] Document recources

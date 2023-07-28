@@ -25,3 +25,7 @@ int container_destroy(int container_pid);
 // setgroups and setresgid are necessary because of two separate group
 // mechanisms on Linux.
 int container_set_userns(container_config *config);
+
+int container_set_syscalls();
+int container_set_mounts(container_config *config);
+int container_set_capabilities();
