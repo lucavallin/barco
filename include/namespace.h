@@ -3,6 +3,12 @@
 
 // The stack size for the container
 #define NAMESPACE_STACK_SIZE (1024 * 1024)
+// Error codes
+#define NAMESPACE_ERR_SOCKETPAIR 1
+#define NAMESPACE_ERR_FCNTL 2
+#define NAMESPACE_ERR_STACK_MALLOC 3
+#define NAMESPACE_USERNS_OFFSET 10000
+#define NAMESPACE_USERNS_COUNT 2000
 
 // Initializes a socket pair for communication
 // with the container

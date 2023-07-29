@@ -1,7 +1,6 @@
 // Required for clone()
 #define _GNU_SOURCE
 #include "../include/container.h"
-#include "../include/namespace.h"
 #include <errno.h>
 #include <grp.h>
 #include <sched.h>
@@ -18,9 +17,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <wait.h>
-
-//
-#define CONTAINER_SCMP_FAIL SCMP_ACT_ERRNO(EPERM)
 
 // The order of the operations is of important as, for example,
 // mounts cannot be changed without specific capabilities,
@@ -53,11 +49,8 @@ int container_init(container_config *config, char *stack) {
   int flags = CLONE_NEWNS | CLONE_NEWCGROUP | CLONE_NEWPID | CLONE_NEWIPC |
               CLONE_NEWNET | CLONE_NEWUTS;
 
-  // Stacks on most architectures grow downwards.
-  // NAMESPACE_STACK_SIZE gives us a pointer just below the end
   // SIGCHLD lets us wait on the child process.
-  int container_pid = clone(container_start, stack + NAMESPACE_STACK_SIZE,
-                            flags | SIGCHLD, &config);
+  int container_pid = clone(container_start, stack, flags | SIGCHLD, &config);
 
   // Close and zero the child's socket, to avoid leaving an open fd in
   // case of a failure. If we don't do this, the child or parent might hang.

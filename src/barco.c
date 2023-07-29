@@ -100,7 +100,9 @@ finish_options:
   }
 
   // Initialize the container (calls clone() internally)
-  container_pid = container_init(&config, stack);
+  // Stacks on most architectures grow downwards.
+  // NAMESPACE_STACK_SIZE gives us a pointer just below the end.
+  container_pid = container_init(&config, stack + NAMESPACE_STACK_SIZE);
   if (container_pid == -1) {
     fprintf(stderr, "=> container_init failed\n");
     err = 1;

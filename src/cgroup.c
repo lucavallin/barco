@@ -7,13 +7,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define CGROUP_MEMORY "1073741824" // 1GB
-#define CGROUP_SHARES "256"
-#define CGROUP_PIDS "64"
-#define CGROUP_WEIGHT "10"
-#define CGROUP_FD_COUNT 64
-#define CGROUP_CONTROL_FIELD_SIZE 256
-
 struct cgrp_control {
   char control[CGROUP_CONTROL_FIELD_SIZE];
   struct cgrp_setting {

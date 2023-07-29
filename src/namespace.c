@@ -6,13 +6,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-// Error codes
-#define NAMESPACE_ERR_SOCKETPAIR 1
-#define NAMESPACE_ERR_FCNTL 2
-#define NAMESPACE_ERR_STACK_MALLOC 3
-#define NAMESPACE_USERNS_OFFSET 10000
-#define NAMESPACE_USERNS_COUNT 2000
-
 // The container needs to send some messages to the parent, so we create a
 // socket pair and give the container access to one.
 int namespace_socket_pair_init(int sockets[]) {
