@@ -24,6 +24,15 @@ struct cgrp_control {
 
 struct cgrp_setting add_to_tasks = {.name = "tasks", .value = "0"};
 
+// Cgroups let us limit resources allocated to a process to prevent it from
+// dying services to the rest of the system. The cgroup must be created before
+// the container enters a cgroup namespace. The following settings are applied:
+// - memory.limit_in_bytes: 1GB (container memory limit)
+// - memory.kmem.limit_in_bytes: 1GB (kernel memory limit)
+// - cpu.shares: 256 (a quarter of the CPU time)
+// - pids.max: 64 (max number of processes)
+// - blkio.weight: 50 (I/O priority, lower than the rest of the system and
+// prioritized accordingly)
 struct cgrp_control *cgrps[] = {
     &(struct cgrp_control){
         .control = "memory",
@@ -54,6 +63,11 @@ struct cgrp_control *cgrps[] = {
                                               &add_to_tasks, NULL}},
     NULL};
 
+// cgroup settings are written to the cgroup v1 filesystem as follows:
+// - create a directory for the cgroup
+// - write the settings to the cgroup files (each setting is a file)
+// - a pid can be added to tasks to add the process tree to the cgroup (pid 0
+// means the writing process)
 int cgroup_init(container_config *config) {
   fprintf(stderr, "=> setting cgroup...");
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {
@@ -88,6 +102,11 @@ int cgroup_init(container_config *config) {
     }
   }
   fprintf(stderr, "done.\n");
+
+  // The hard limit on the number of file descriptors is lowered. If the
+  // capability CAP_SYS_RESOURCE is dropped, the limit is permanent for
+  // this process tree. The number of file descriptors is on a per-user basis.
+  // This limit prevents in-container process from occupying all of them.
   fprintf(stderr, "=> setting rlimit...");
   if (setrlimit(RLIMIT_NOFILE, &(struct rlimit){
                                    .rlim_max = CGROUP_FD_COUNT,
@@ -100,6 +119,9 @@ int cgroup_init(container_config *config) {
   return 0;
 }
 
+// Clean up the cgroup for the container: the container process is moved back
+// into the root task. When the container exits, its process tree is removed and
+// the task is empty. Afterwards, rmdir can safely be run.
 int cgroup_free(container_config *config) {
   fprintf(stderr, "=> cleaning cgroup...");
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {

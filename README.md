@@ -125,6 +125,16 @@ The project is developed using the following tools, which are installed by defau
 At the moment, the project does not contain any automated tests or tools to document the code.
 In the future, suitable tools for automated testing and documentation might be added.
 
+## Limitations
+barco does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
+- create a new network namespace
+- create a virtual ethernet pair
+- move one end of the pair to the new network namespace
+- assign an IP address to the interface in the new network namespace
+- setup routing and NAT
+
+In C this is usually done via the `rtnetlink` interface. Furthermore, network usage can be limited with the `net_prio` cgroup controller.
+
 ## Improvements
 
 - [ ] Move print statements to main
@@ -133,4 +143,3 @@ In the future, suitable tools for automated testing and documentation might be a
 - [ ] Remove unused includes
 - [ ] Ensure only functions meant to be public are exposed
 - [ ] Ensure no cross-module dependencies
-- [ ] Document recources
