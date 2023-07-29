@@ -5,7 +5,6 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 // BASE_10 is the base of the number system,
 // used to convert a string to a number.

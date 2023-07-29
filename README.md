@@ -141,5 +141,3 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 - [ ] Use CLI library for parsing arguments
 - [ ] Use CMake and Vcpkg
 - [ ] Review code documentation
-- [ ] Remove unused includes
-- [ ] Ensure only functions meant to be public are exposed

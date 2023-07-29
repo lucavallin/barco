@@ -5,7 +5,6 @@
 #include <grp.h>
 #include <sched.h>
 #include <seccomp.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,62 +13,14 @@
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <wait.h>
 
-// The order of the operations is of important as, for example,
-// mounts cannot be changed without specific capabilities,
-// unshare cannot be called after syscalls are limited, etc...
-int container_start(void *arg) {
-  container_config *config = arg;
-  if (sethostname(config->hostname, strlen(config->hostname)) ||
-      container_set_mounts(config) || container_set_userns(config) ||
-      container_set_capabilities() || container_set_syscalls()) {
-    close(config->fd);
-    return -1;
-  }
-  if (close(config->fd)) {
-    fprintf(stderr, "close failed: %m\n");
-    return -1;
-  }
-  if (execve(config->argv[0], config->argv, NULL)) {
-    fprintf(stderr, "execve failed! %m.\n");
-    return -1;
-  }
-  return 0;
-}
-
-// Creates container (process) with different properties than its parent
-// e.g. mount to different dir, different hostname, etc...
-// All these requirements are specified by the flags we pass to clone()
-int container_init(container_config *config, char *stack) {
-  // The flags namespace the mounts, pids, IPC data structures, network devices
-  // and hostname.
-  int flags = CLONE_NEWNS | CLONE_NEWCGROUP | CLONE_NEWPID | CLONE_NEWIPC |
-              CLONE_NEWNET | CLONE_NEWUTS;
-
-  // SIGCHLD lets us wait on the child process.
-  int container_pid = clone(container_start, stack, flags | SIGCHLD, &config);
-
-  // Close and zero the child's socket, to avoid leaving an open fd in
-  // case of a failure. If we don't do this, the child or parent might hang.
-  close(config->fd);
-  config->fd = 0;
-
-  return container_pid;
-}
-
-void container_stop(int container_pid) { kill(container_pid, SIGKILL); }
-
-int container_destroy(int container_pid) {
-  int child_status = 0;
-  waitpid(container_pid, &child_status, 0);
-  return WEXITSTATUS(child_status);
-}
-
-// The function assumes that every uid has a corresponding gid, which is often
-// the case.
+// Listens for the container to request setting uid and gid mappings.
+// If successful, isetgroups, setresgid, and setresuid are called.
+// setgroups and setresgid are necessary because of two separate group
+// mechanisms on Linux. The function assumes that every uid has a corresponding
+// gid, which is often the case.
 int container_set_userns(container_config *config) {
   int has_userns = !unshare(CLONE_NEWUSER);
   int result = 0;
@@ -350,4 +301,54 @@ int container_set_syscalls() {
   fprintf(stderr, "done.\n");
 
   return 0;
+}
+
+// The order of the operations is of important as, for example,
+// mounts cannot be changed without specific capabilities,
+// unshare cannot be called after syscalls are limited, etc...
+int container_start(void *arg) {
+  container_config *config = arg;
+  if (sethostname(config->hostname, strlen(config->hostname)) ||
+      container_set_mounts(config) || container_set_userns(config) ||
+      container_set_capabilities() || container_set_syscalls()) {
+    close(config->fd);
+    return -1;
+  }
+  if (close(config->fd)) {
+    fprintf(stderr, "close failed: %m\n");
+    return -1;
+  }
+  if (execve(config->argv[0], config->argv, NULL)) {
+    fprintf(stderr, "execve failed! %m.\n");
+    return -1;
+  }
+  return 0;
+}
+
+// Creates container (process) with different properties than its parent
+// e.g. mount to different dir, different hostname, etc...
+// All these requirements are specified by the flags we pass to clone()
+int container_init(container_config *config, char *stack) {
+  // The flags namespace the mounts, pids, IPC data structures, network devices
+  // and hostname.
+  int flags = CLONE_NEWNS | CLONE_NEWCGROUP | CLONE_NEWPID | CLONE_NEWIPC |
+              CLONE_NEWNET | CLONE_NEWUTS;
+
+  // SIGCHLD lets us wait on the child process.
+  int container_pid = clone(container_start, stack, flags | SIGCHLD, &config);
+
+  // Close and zero the child's socket, to avoid leaving an open fd in
+  // case of a failure. If we don't do this, the child or parent might hang.
+  close(config->fd);
+  config->fd = 0;
+
+  return container_pid;
+}
+
+void container_stop(int container_pid) { kill(container_pid, SIGKILL); }
+
+int container_destroy(int container_pid) {
+  int child_status = 0;
+  waitpid(container_pid, &child_status, 0);
+  return WEXITSTATUS(child_status);
 }

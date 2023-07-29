@@ -1,5 +1,3 @@
-#include <stddef.h>
-
 // The maximum length of a hostname
 #define HOSTNAME_LEN 32
 

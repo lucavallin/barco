@@ -1,5 +1,4 @@
 #include "../include/hostname.h"
-#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
