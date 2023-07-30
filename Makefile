@@ -13,6 +13,7 @@ LIB_ARGTABLE_NAME := argtable3
 LIB_ARGTABLE_PATH := $(LIB_DIR)/argtable/argtable3.c
 LIB_LOG_NAME := log
 LIB_LOG_PATH := $(LIB_DIR)/log.c/src/log.c
+LIB_LOG_FLAGS := -DLOG_USE_COLOR
 LIB_OBJS := $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o $(BUILD_DIR)/$(LIB_LOG_NAME).o
 
 # -- Compiler Settings --
@@ -40,7 +41,7 @@ $(BIN): dir libs $(OBJS)
 ## -- Build third-party libraries --
 libs: dir
 	@$(CC) -o $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o -c $(LIB_ARGTABLE_PATH)
-	@$(CC) -o $(BUILD_DIR)/$(LIB_LOG_NAME).o -c $(LIB_LOG_PATH)
+	@$(CC) -o $(BUILD_DIR)/$(LIB_LOG_NAME).o -c $(LIB_LOG_PATH) $(LIB_LOG_FLAGS)
 
 # -- Utility targets --
 

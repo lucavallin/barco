@@ -65,7 +65,7 @@ struct cgrp_control *cgrps[] = {
 // means the writing process)
 int cgroup_init(container_config *config) {
 
-  fprintf(stderr, "=> setting cgroup...");
+  log_debug("setting cgroup...");
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {
     char dir[PATH_MAX] = {0};
     fprintf(stderr, "%s...", (*cgrp)->control);

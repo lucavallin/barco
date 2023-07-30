@@ -18,10 +18,10 @@ help with this, but it is not available on all systems as it can be a security r
 
 ## Usage
 
-`barco` can be used to run `bin/sh` in the [busybox image](./data/img/busybox) as `root`:
+`barco` can be used to run `bin/sh` in the current directory as `root`:
 
 ```bash
-$ sudo ./barco -m ./data/img/busybox -u 0 -c /bin/sh
+$ sudo ./barco -m . -u 0 -c /bin/sh
 ```
 
 ## Setup
