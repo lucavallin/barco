@@ -318,7 +318,7 @@ int container_start(void *arg) {
     fprintf(stderr, "close failed: %m\n");
     return -1;
   }
-  if (execve(config->argv[0], config->argv, NULL)) {
+  if (execve(&config->cmd[0], &config->cmd, NULL)) {
     fprintf(stderr, "execve failed! %m.\n");
     return -1;
   }

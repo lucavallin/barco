@@ -6,11 +6,10 @@
 
 // Represents the configuration for a container.
 typedef struct {
-  int argc;
   uid_t uid;
   int fd;
   char *hostname;
-  char **argv;
+  char *cmd;
   char *mount_dir;
 } container_config;
 
