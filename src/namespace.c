@@ -1,4 +1,5 @@
 #include "../include/namespace.h"
+#include "../lib/log.c/src/log.h"
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <stdio.h>
@@ -10,11 +11,11 @@
 // socket pair and give the container access to one.
 int namespace_socket_pair_init(int sockets[]) {
   if (socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
-    fprintf(stderr, "socketpair failed: %m\n");
+    log_error("socketpair failed: %m");
     return NAMESPACE_ERR_SOCKETPAIR;
   }
   if (fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
-    fprintf(stderr, "fcntl failed: %m\n");
+    log_error("fcntl failed: %m");
     return NAMESPACE_ERR_FCNTL;
   }
 
@@ -33,7 +34,7 @@ void namespace_socket_pair_close(int sockets[]) {
 
 int namespace_stack_init(char **stack) {
   if (!(*stack = malloc(NAMESPACE_STACK_SIZE))) {
-    fprintf(stderr, "malloc failed\n");
+    log_error("malloc failed");
     return NAMESPACE_ERR_STACK_MALLOC;
   }
 
@@ -45,7 +46,7 @@ int namespace_handle_container_uid_map(pid_t container_pid, int fd) {
   int has_userns = -1;
 
   if (read(fd, &has_userns, sizeof(has_userns)) != sizeof(has_userns)) {
-    fprintf(stderr, "couldn't read from child!\n");
+    log_error("could not read from container");
     return -1;
   }
 
@@ -54,17 +55,18 @@ int namespace_handle_container_uid_map(pid_t container_pid, int fd) {
     for (char **file = (char *[]){"uid_map", "gid_map", 0}; *file; file++) {
       if (snprintf(path, sizeof(path), "/proc/%d/%s", container_pid, *file) >
           (int)sizeof(path)) {
-        fprintf(stderr, "snprintf too big? %m\n");
+        log_error("snprintf might be too big");
         return -1;
       }
-      fprintf(stderr, "writing %s...", path);
+
+      log_debug("writing %s...", path);
       if ((uid_map = open(path, O_WRONLY)) == -1) {
-        fprintf(stderr, "open failed: %m\n");
+        log_error("open failed: %m");
         return -1;
       }
       if (dprintf(uid_map, "0 %d %d\n", NAMESPACE_USERNS_OFFSET,
                   NAMESPACE_USERNS_COUNT) == -1) {
-        fprintf(stderr, "dprintf failed: %m\n");
+        log_error("dprintf failed: %m");
         close(uid_map);
         return -1;
       }
@@ -73,7 +75,7 @@ int namespace_handle_container_uid_map(pid_t container_pid, int fd) {
   }
 
   if (write(fd, &(int){0}, sizeof(int)) != sizeof(int)) {
-    fprintf(stderr, "couldn't write: %m\n");
+    log_error("could not write: %m");
     return -1;
   }
 

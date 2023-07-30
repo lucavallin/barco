@@ -1,4 +1,5 @@
 #include "../include/cgroup.h"
+#include "../lib/log.c/src/log.h"
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <stdio.h>
@@ -48,12 +49,13 @@ struct cgrp_control *cgrps[] = {
                                    &(struct cgrp_setting){.name = "pids.max",
                                                           .value = CGROUP_PIDS},
                                    &add_to_tasks, NULL}},
-    &(struct cgrp_control){
-        .control = "blkio",
-        .settings = (struct cgrp_setting *[]){&(struct cgrp_setting){
-                                                  .name = "blkio.weight",
-                                                  .value = CGROUP_PIDS},
-                                              &add_to_tasks, NULL}},
+    // TODO: this doesn't work on my system, but it should
+    // &(struct cgrp_control){
+    //     .control = "blkio",
+    //     .settings = (struct cgrp_setting *[]){&(struct cgrp_setting){
+    //                                               .name = "blkio.weight",
+    //                                               .value = CGROUP_PIDS},
+    //                                           &add_to_tasks, NULL}},
     NULL};
 
 // cgroup settings are written to the cgroup v1 filesystem as follows:
@@ -62,6 +64,7 @@ struct cgrp_control *cgrps[] = {
 // - a pid can be added to tasks to add the process tree to the cgroup (pid 0
 // means the writing process)
 int cgroup_init(container_config *config) {
+
   fprintf(stderr, "=> setting cgroup...");
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {
     char dir[PATH_MAX] = {0};

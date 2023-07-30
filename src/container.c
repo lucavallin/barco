@@ -1,6 +1,7 @@
 // Required for clone()
 #define _GNU_SOURCE
 #include "../include/container.h"
+#include "../lib/log.c/src/log.h"
 #include <errno.h>
 #include <grp.h>
 #include <sched.h>
@@ -13,6 +14,7 @@
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <time.h>
 #include <unistd.h>
 #include <wait.h>
 
@@ -171,7 +173,7 @@ int container_set_mounts(container_config *config) {
   }
 
   if (mount(config->mount_dir, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
-    fprintf(stderr, "bind mount failed!\n");
+    fprintf(stderr, "bind mount failed: path=%s\n", config->mount_dir);
     return -1;
   }
 
@@ -351,4 +353,20 @@ int container_destroy(int container_pid) {
   int child_status = 0;
   waitpid(container_pid, &child_status, 0);
   return WEXITSTATUS(child_status);
+}
+
+void container_hostname_generate(char *hostname) {
+  int len = sizeof(hostname);
+  char chars[] =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+
+  srand(time(0));
+  for (int i = 0; i < len; i++) {
+    int chars_len = sizeof(chars) - 1;
+    int randomIndex =
+        (int)rand() % chars_len; // NOLINT(cert-msc30-c, cert-msc50-cpp)
+    hostname[i] = chars[randomIndex];
+  }
+  // null terminate the string
+  hostname[len] = '\0';
 }

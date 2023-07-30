@@ -1,8 +1,8 @@
 #include "../include/cgroup.h"
 #include "../include/container.h"
-#include "../include/hostname.h"
 #include "../include/namespace.h"
 #include "../lib/argtable/argtable3.h"
+#include "../lib/log.c/src/log.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +10,7 @@
 // BASE_10 is the base of the number system,
 // used to convert a string to a number.
 #define BASE_10 10
+#define HOSTNAME_LEN 32
 
 /* global arg_xxx structs */
 struct arg_lit *help, *version;
@@ -39,7 +40,7 @@ int main(int argc, char **argv) {
       cmd = arg_strn("c", "cmd", "<s>", 1, 1,
                      "set the command to run in the container"),
       img = arg_strn("m", "img", "<s>", 1, 1,
-                     "set the image to use for the container"),
+                     "set the mount path to use for the container"),
       end = arg_end(20),
   };
 
@@ -68,7 +69,7 @@ int main(int argc, char **argv) {
     goto exit;
   }
 
-  config.cmd = "/bin/sh";
+  config.cmd = (char *)cmd->sval[0];
   config.mount_dir = (char *)img->sval[0];
 
   // Here we could check that the Linux version is between 4.7.x and 4.8.x on
@@ -77,12 +78,12 @@ int main(int argc, char **argv) {
   // ones.
 
   // Set hostname for the container to a random string
-  hostname_generate(hostname);
+  container_hostname_generate(hostname);
   config.hostname = hostname;
 
   // Initialize a socket pair to communicate with the container
   if (namespace_socket_pair_init(sockets) != 0) {
-    fprintf(stderr, "=> namespace_socket_pair_init failed\n");
+    log_error("namespace_socket_pair_init failed");
     exitcode = 1;
     goto exit;
   }
@@ -90,7 +91,7 @@ int main(int argc, char **argv) {
 
   // Initialize a stack for the container
   if (namespace_stack_init(&stack) != 0) {
-    fprintf(stderr, "=> namespace_stack_init failed\n");
+    log_error("namespace_stack_init failed");
     exitcode = 1;
     goto cleanup;
   }
@@ -107,7 +108,7 @@ int main(int argc, char **argv) {
   // NAMESPACE_STACK_SIZE gives us a pointer just below the end.
   container_pid = container_init(&config, stack + NAMESPACE_STACK_SIZE);
   if (container_pid == -1) {
-    fprintf(stderr, "=> container_init failed\n");
+    log_error("container_init failed");
     exitcode = 1;
     goto cleanup;
   }

@@ -6,7 +6,7 @@ BIN_DIR := ./bin
 INCLUDE_DIR := ./include
 LIB_DIR := ./lib
 BIN := barco
-OBJS := $(BIN).o cgroup.o container.o hostname.o namespace.o
+OBJS := $(BIN).o cgroup.o container.o namespace.o
 
 # -- Libraries Settings --
 LIB_ARGTABLE_NAME := argtable3

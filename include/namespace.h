@@ -1,4 +1,6 @@
-#pragma once
+#ifndef NAMESPACE_H
+#define NAMESPACE_H
+
 #include <sys/types.h>
 
 // The stack size for the container
@@ -23,3 +25,5 @@ void namespace_socket_pair_close(int sockets[]);
 // Configures the container's user namespace and
 // pause until its process tree exits
 int namespace_handle_container_uid_map(pid_t container_pid, int fd);
+
+#endif

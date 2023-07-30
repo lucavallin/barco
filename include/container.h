@@ -1,4 +1,6 @@
-#pragma once
+#ifndef CONTAINER_H
+#define CONTAINER_H
+
 #include <sys/types.h>
 
 // Used to represent the result of a seccomp rule.
@@ -21,3 +23,8 @@ void container_stop(int container_pid);
 
 // Destroys the container.
 int container_destroy(int container_pid);
+
+// Generates a random hostname for the container.
+void container_hostname_generate(char *hostname);
+
+#endif

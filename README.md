@@ -137,7 +137,9 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Improvements
 
-- [ ] Move print statements to main
+- [ ] Move print statements to main?
+- [ ] Use log.c
+- [ ] Address linting issues
 - [ ] Use CMake and Vcpkg
 - [ ] Review code documentation
 - [ ] Can I remove goto statements?

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef CGROUP_H
+#define CGROUP_H
+
 #include "container.h"
 
 // Used for cgroup limits initialization
@@ -13,3 +15,5 @@
 int cgroup_init(container_config *config);
 // Cleans up cgroup for the container
 int cgroup_free(container_config *config);
+
+#endif
