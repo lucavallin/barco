@@ -3,14 +3,18 @@
 #include "../include/namespace.h"
 #include "../lib/argtable/argtable3.h"
 #include "../lib/log.c/src/log.h"
-#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// BASE_10 is the base of the number system,
-// used to convert a string to a number.
-#define BASE_10 10
-#define HOSTNAME_LEN 32
+enum {
+  // BASE_10 is the base of the number system,
+  // used to convert a string to a number.
+  BASE_10 = 10,
+  // HOSTNAME_LEN is the length of the hostname
+  HOSTNAME_LEN = 32,
+  // ARGTABLE_ARG_MAX is the maximum number of arguments
+  ARGTABLE_ARG_MAX = 20
+};
 
 /* global arg_xxx structs */
 struct arg_lit *help, *version;
@@ -41,11 +45,11 @@ int main(int argc, char **argv) {
                      "set the command to run in the container"),
       img = arg_strn("m", "img", "<s>", 1, 1,
                      "set the mount path to use for the container"),
-      end = arg_end(20),
+      end = arg_end(ARGTABLE_ARG_MAX),
   };
 
   int exitcode = 0;
-  char progname[] = "vodo";
+  char progname[] = "barco";
 
   int nerrors;
   nerrors = arg_parse(argc, argv, argtable);
@@ -69,12 +73,12 @@ int main(int argc, char **argv) {
     goto exit;
   }
 
-  config.cmd = (char *)cmd->sval[0];
-  config.mount_dir = (char *)img->sval[0];
+  config.cmd = cmd->sval;
+  config.mount_dir = img->sval;
 
   // Here we could check that the Linux version is between 4.7.x and 4.8.x on
   // x86_64 with e.g. version_check() in src/version.c. Since we might want to
-  // block system calls and capabilities, we need to make sure there aren't new
+  // block system calls and capabilities, we need to make sure there are not new
   // ones.
 
   // Set hostname for the container to a random string
@@ -87,7 +91,7 @@ int main(int argc, char **argv) {
     exitcode = 1;
     goto exit;
   }
-  config.fd = sockets[1];
+  config.fdr = sockets[1];
 
   // Initialize a stack for the container
   if (namespace_stack_init(&stack) != 0) {
@@ -115,7 +119,7 @@ int main(int argc, char **argv) {
 
   // Configures the container's user namespace and
   // pause until its process tree exits
-  if (namespace_handle_container_uid_map(container_pid, sockets[0])) {
+  if (namespace_set_uid_map(container_pid, sockets[0])) {
     exitcode = 1;
     goto stop_and_destroy_container;
   }

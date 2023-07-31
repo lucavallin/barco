@@ -3,4 +3,5 @@
 # Install C dependencies
 sudo apt install -y \
     libseccomp-dev \
-    libcap-dev
+    libcap-dev \
+    libbsd-dev

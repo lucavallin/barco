@@ -1,11 +1,16 @@
 # -- Project Settings --
 debug ?= 0
-SRC_DIR := ./src
-BUILD_DIR := ./build
-BIN_DIR := ./bin
-INCLUDE_DIR := ./include
-LIB_DIR := ./lib
+PWD := $(shell pwd)
+SRC_DIR := $(PWD)/src
+BUILD_DIR := $(PWD)/build
+INCLUDE_DIR := $(PWD)/include
+LIB_DIR := $(PWD)/lib
+BIN_DIR := $(PWD)/bin
 BIN := barco
+BIN_ARGS_0 := -h
+BIN_ARGS_1 := -u 0 -m . -c /bin/sh
+
+# -- Barco Objects --
 OBJS := $(BIN).o cgroup.o container.o namespace.o
 
 # -- Libraries Settings --
@@ -17,26 +22,28 @@ LIB_LOG_FLAGS := -DLOG_USE_COLOR
 LIB_OBJS := $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o $(BUILD_DIR)/$(LIB_LOG_NAME).o
 
 # -- Compiler Settings --
-CC := clang
-CLIBS := -lcap -lseccomp -lm
-CFLAGS := -std=gnu17 -Wall -Wextra -pedantic -pedantic-errors
+CC := clang-18 --config ./clang.cfg
+LINTER := clang-tidy-18
+FORMATTER := clang-format-18
+DEBUGGER := lldb-18
+DISASSEMBLER := llvm-objdump-18
 
 # -- Debug Settings --
 ifeq ($(debug), 1)
-	CFLAGS := $(CFLAGS) -g -O0
+	CC := $(CC) -g -O0
 else
-	CFLAGS := $(CFLAGS) -O2
+	CC := $(CC) -Oz
 endif
 
 # -- Targets --
 
 ## -- Build barco executable --
-$(BIN): dir libs $(OBJS)
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(BIN) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file)) $(LIB_OBJS) $(CLIBS)
+$(BIN): format lint dir libs $(OBJS)
+	$(CC) -o $(BIN_DIR)/$(BIN) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file)) $(LIB_OBJS) $(CLIBS)
 
 ## -- Build object files --
 %.o: dir $(SRC_DIR)/%.c
-	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$*.o -c $(SRC_DIR)/$*.c
+	@$(CC) -o $(BUILD_DIR)/$*.o -c $(SRC_DIR)/$*.c
 
 ## -- Build third-party libraries --
 libs: dir
@@ -52,26 +59,27 @@ dir:
 
 ## -- Run clang-tidy linter on src/ and lib/ directories --
 lint:
-	@find $(SRC_DIR) $(INCLUDE_DIR) -regex '.*\.\(c\|h\)' -exec clang-tidy --header-filter=.* {} \;
+	@$(LINTER) --config-file=$(PWD)/.clang-tidy $(SRC_DIR)/* $(INCLUDE_DIR)/* --
 
 ## -- Run clang-format formatter  on src/ and lib/ directories --
 format:
-	@find $(SRC_DIR) $(INCLUDE_DIR) -regex '.*\.\(c\|h\)' -exec clang-format -style=file -i {} \;
+	@$(FORMATTER) -style=file -i $(SRC_DIR)/* $(INCLUDE_DIR)/*
 
 ## -- Run valgrind memory checker on executable --
-valgrind: $(BIN)
-	@valgrind --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BIN)
+check: $(BIN)
+	@valgrind --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BIN) $(BIN_ARGS_0)
+	@valgrind --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BIN) $(BIN_ARGS_1)
 
 ## -- Run lldb debugger on executable --
-debugger: $(BIN)
-	@lldb $(BIN_DIR)/$(BIN)
+debug: $(BIN)
+	@$(DEBUGGER) $(BIN_DIR)/$(BIN)
 
 ## -- Run objdump disassembler on object files --
-objdump: dir $(BIN).o
-	@objdump -S -l -d $(BIN_DIR)/$(BIN).o > $(BIN_DIR)/$(BIN).o.asm
+asm: dir $(BIN).o
+	@$(DISASSEMBLER) -S -l -d $(BUILD_DIR)/$(BIN).o > $(BUILD_DIR)/$(BIN).o.asm
 
 ## -- Clean build and bin directories --
 clean:
 	@rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-.PHONY: dir lint format valgrind debugger objdump clean
+.PHONY: dir lint format check debug asm clean

@@ -1,18 +1,19 @@
 #ifndef CONTAINER_H
 #define CONTAINER_H
 
+#include <errno.h>
 #include <sys/types.h>
 
 // Used to represent the result of a seccomp rule.
 #define CONTAINER_SCMP_FAIL SCMP_ACT_ERRNO(EPERM)
 
 // Represents the configuration for a container.
-typedef struct {
+typedef struct container_config {
   uid_t uid;
-  int fd;
+  int fdr;
   char *hostname;
-  char *cmd;
-  char *mount_dir;
+  const char **cmd;
+  const char **mount_dir;
 } container_config;
 
 // Initializes the container.

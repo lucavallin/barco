@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Update apt
-sudo apt update
+sudo apt update && sudo apt upgrade -y
 
 # Install build tools
-sudo ./scripts/install-build-tools.sh
-sudo ./scripts/install-dependencies.sh
+sudo ./scripts/install-build.sh
+sudo ./scripts/install-deps.sh

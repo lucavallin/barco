@@ -1,11 +1,13 @@
-// Required for clone()
-#define _GNU_SOURCE
 #include "../include/container.h"
 #include "../lib/log.c/src/log.h"
-#include <errno.h>
+#include <asm-generic/ioctls.h>
+#include <bsd/string.h>
 #include <grp.h>
+#include <linux/capability.h>
+#include <linux/prctl.h>
 #include <sched.h>
 #include <seccomp.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +16,10 @@
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#include <wait.h>
 
 // Listens for the container to request setting uid and gid mappings.
 // If successful, isetgroups, setresgid, and setresuid are called.
@@ -27,15 +30,15 @@ int container_set_userns(container_config *config) {
   int has_userns = !unshare(CLONE_NEWUSER);
   int result = 0;
 
-  fprintf(stderr, "=> trying a user namespace...");
-  if (write(config->fd, &has_userns, sizeof(has_userns)) !=
+  log_debug("trying a user namespace...");
+  if (write(config->fdr, &has_userns, sizeof(has_userns)) !=
       sizeof(has_userns)) {
-    fprintf(stderr, "couldn't write: %m\n");
+    log_error("could not write: %m");
     return -1;
   }
 
-  if (read(config->fd, &result, sizeof(result)) != sizeof(result)) {
-    fprintf(stderr, "couldn't read: %m\n");
+  if (read(config->fdr, &result, sizeof(result)) != sizeof(result)) {
+    log_error("could not read: %m");
     return -1;
   }
   if (result) {
@@ -43,22 +46,21 @@ int container_set_userns(container_config *config) {
   }
 
   if (has_userns) {
-    fprintf(stderr, "done.\n");
+    log_debug("done");
   } else {
-    fprintf(stderr, "unsupported? continuing.\n");
+    log_debug("might be unsupported. continuing...");
   }
 
-  fprintf(stderr, "=> switching to uid %d / gid %d...", config->uid,
-          config->uid);
+  log_debug("switching to uid %d / gid %d...", config->uid, config->uid);
 
   if (setgroups(1, &(gid_t){config->uid}) ||
       setresgid(config->uid, config->uid, config->uid) ||
       setresuid(config->uid, config->uid, config->uid)) {
-    fprintf(stderr, "%m\n");
+    log_error("%m");
     return -1;
   }
 
-  fprintf(stderr, "done.\n");
+  log_debug("done");
 
   return 0;
 }
@@ -103,8 +105,8 @@ int container_set_userns(container_config *config) {
 // CAP_SETPCAP: allow setting arbitrary, already-assigned capabilities
 // CAP_SYS_CHROOT: allow chroot() (has risks)
 // CAP_SYS_TTYCONFIG: allow configuring TTY devices (has risks)
-int container_set_capabilities() {
-  fprintf(stderr, "=> dropping capabilities...");
+int container_set_capabilities(void) {
+  log_debug("dropping capabilities...");
   int drop_caps[] = {
       CAP_AUDIT_CONTROL,   CAP_AUDIT_READ,   CAP_AUDIT_WRITE, CAP_BLOCK_SUSPEND,
       CAP_DAC_READ_SEARCH, CAP_FSETID,       CAP_IPC_LOCK,    CAP_MAC_ADMIN,
@@ -112,22 +114,21 @@ int container_set_capabilities() {
       CAP_SYS_ADMIN,       CAP_SYS_BOOT,     CAP_SYS_MODULE,  CAP_SYS_NICE,
       CAP_SYS_RAWIO,       CAP_SYS_RESOURCE, CAP_SYS_TIME,    CAP_WAKE_ALARM};
 
-  size_t num_caps = sizeof(drop_caps) / sizeof(*drop_caps);
-  fprintf(stderr, "bounding...");
-  for (size_t i = 0; i < num_caps; i++) {
+  int num_caps = sizeof(drop_caps) / sizeof(*drop_caps);
+  log_debug("bounding...");
+  for (int i = 0; i < num_caps; i++) {
     if (prctl(PR_CAPBSET_DROP, drop_caps[i], 0, 0, 0)) {
-      fprintf(stderr, "prctl failed: %m\n");
+      log_error("prctl failed: %m");
       return 1;
     }
   }
 
-  fprintf(stderr, "inheritable...");
-  cap_t caps = NULL;
-  if (!(caps = cap_get_proc()) ||
+  log_debug("inheritable...");
+  cap_t caps = cap_get_proc();
+  if (!caps ||
       cap_set_flag(caps, CAP_INHERITABLE, num_caps, drop_caps, CAP_CLEAR) ||
       cap_set_proc(caps)) {
-
-    fprintf(stderr, "failed: %m\n");
+    log_error("failed: %m");
     if (caps) {
       cap_free(caps);
     }
@@ -136,7 +137,7 @@ int container_set_capabilities() {
   }
 
   cap_free(caps);
-  fprintf(stderr, "done.\n");
+  log_debug("done");
 
   return 0;
 }
@@ -158,58 +159,58 @@ long pivot_root(const char *new_root, const char *put_old) {
 // is risky if the mounted directory contains sensitive data.
 int container_set_mounts(container_config *config) {
   // MS_PRIVATE makes the bind mount invisible outside of the namespace
-  fprintf(stderr, "=> remounting everything with MS_PRIVATE...");
+  log_debug("remounting everything with MS_PRIVATE...");
   if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL)) {
-    fprintf(stderr, "failed! %m\n");
+    log_error("failed: %m");
     return -1;
   }
-  fprintf(stderr, "remounted.\n");
+  log_debug("remounted");
 
-  fprintf(stderr, "=> making a temp directory and a bind mount there...");
+  log_debug("making a temp directory and a bind mount there...");
   char mount_dir[] = "/tmp/tmp.XXXXXX";
   if (!mkdtemp(mount_dir)) {
-    fprintf(stderr, "failed making a directory!\n");
+    log_error("failed making a directory");
     return -1;
   }
 
-  if (mount(config->mount_dir, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
-    fprintf(stderr, "bind mount failed: path=%s\n", config->mount_dir);
+  if (mount(*config->mount_dir, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
+    log_error("bind mount failed: path=%s", config->mount_dir);
     return -1;
   }
 
   char inner_mount_dir[] = "/tmp/tmp.XXXXXX/oldroot.XXXXXX";
   memcpy(inner_mount_dir, mount_dir, sizeof(mount_dir) - 1);
   if (!mkdtemp(inner_mount_dir)) {
-    fprintf(stderr, "failed making the inner directory!\n");
+    log_error("failed creating the inner directory");
     return -1;
   }
-  fprintf(stderr, "done.\n");
+  log_debug("done");
 
-  fprintf(stderr, "=> pivoting root...");
+  log_debug("pivoting root...");
   if (pivot_root(mount_dir, inner_mount_dir)) {
-    fprintf(stderr, "failed!\n");
+    log_error("failed");
     return -1;
   }
-  fprintf(stderr, "done.\n");
+  log_debug("done");
 
   char *old_root_dir = basename(inner_mount_dir);
   char old_root[sizeof(inner_mount_dir) + 1] = {"/"};
-  strcpy(&old_root[1], old_root_dir);
+  strlcpy(&old_root[1], old_root_dir, sizeof(old_root) - 1);
 
-  fprintf(stderr, "=> unmounting %s...", old_root);
+  log_debug("unmounting old root...");
   if (chdir("/")) {
-    fprintf(stderr, "chdir failed! %m\n");
+    log_error("chdir failed: %m");
     return -1;
   }
   if (umount2(old_root, MNT_DETACH)) {
-    fprintf(stderr, "umount failed! %m\n");
+    log_error("umount failed: %m");
     return -1;
   }
   if (rmdir(old_root)) {
-    fprintf(stderr, "rmdir failed! %m\n");
+    log_error("rmdir failed: %m");
     return -1;
   }
-  fprintf(stderr, "done.\n");
+  log_debug("done");
   return 0;
 }
 
@@ -225,10 +226,10 @@ int container_set_mounts(container_config *config) {
 // - already prevented by the capabilities set
 // - available only on particular architectures
 // - newer versions or aliases of other syscalls
-int container_set_syscalls() {
-  scmp_filter_ctx ctx = NULL;
-  fprintf(stderr, "=> filtering syscalls...");
-  if (!(ctx = seccomp_init(SCMP_ACT_ALLOW)) ||
+int container_set_syscalls(void) {
+  scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+  log_debug("filtering syscalls...");
+  if (!ctx ||
       // Calls that allow creating new setuid / setgid executables.
       // The contained process could created a setuid binary that can be used
       // by an user to get root in absence of user namespaces.
@@ -295,12 +296,12 @@ int container_set_syscalls() {
       seccomp_release(ctx);
     }
 
-    fprintf(stderr, "failed: %m\n");
+    log_error("failed to filter syscalls: %m");
     return 1;
   }
 
   seccomp_release(ctx);
-  fprintf(stderr, "done.\n");
+  log_debug("done.");
 
   return 0;
 }
@@ -313,15 +314,15 @@ int container_start(void *arg) {
   if (sethostname(config->hostname, strlen(config->hostname)) ||
       container_set_mounts(config) || container_set_userns(config) ||
       container_set_capabilities() || container_set_syscalls()) {
-    close(config->fd);
+    close(config->fdr);
     return -1;
   }
-  if (close(config->fd)) {
-    fprintf(stderr, "close failed: %m\n");
+  if (close(config->fdr)) {
+    log_error("close failed: %m");
     return -1;
   }
-  if (execve(&config->cmd[0], &config->cmd, NULL)) {
-    fprintf(stderr, "execve failed! %m.\n");
+  if (execve(*config->cmd, config->cmd, NULL)) {
+    log_error("execve failed: %m");
     return -1;
   }
   return 0;
@@ -339,10 +340,10 @@ int container_init(container_config *config, char *stack) {
   // SIGCHLD lets us wait on the child process.
   int container_pid = clone(container_start, stack, flags | SIGCHLD, &config);
 
-  // Close and zero the child's socket, to avoid leaving an open fd in
-  // case of a failure. If we don't do this, the child or parent might hang.
-  close(config->fd);
-  config->fd = 0;
+  // Close and zero the child's socket, to avoid leaving an open fdr in
+  // case of a failure. If we do not do this, the child or parent might hang.
+  close(config->fdr);
+  config->fdr = 0;
 
   return container_pid;
 }
@@ -363,8 +364,7 @@ void container_hostname_generate(char *hostname) {
   srand(time(0));
   for (int i = 0; i < len; i++) {
     int chars_len = sizeof(chars) - 1;
-    int randomIndex =
-        (int)rand() % chars_len; // NOLINT(cert-msc30-c, cert-msc50-cpp)
+    int randomIndex = (int)rand() % chars_len;
     hostname[i] = chars[randomIndex];
   }
   // null terminate the string

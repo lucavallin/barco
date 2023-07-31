@@ -1,10 +1,23 @@
 ---
-ExtraArgs: ["-std=gnu17"]
+ExtraArgs: ["-std=gnu17", "-D _GNU_SOURCE"]
+HeaderFileExtensions:
+  - h
+HeaderFilterRegex: "./include/*"
+ImplementationFileExtensions:
+  - c
+FormatStyle: file
 Checks: "-*,\
   bugprone-*,\
+  -bugprone-easily-swappable-parameters, \
   cert-*,\
+  -cert-msc30-c, \
+  -cert-msc32-c, \
+  -cert-msc50-cpp, \
+  -cert-msc51-cpp, \
   clang-analyzer-*,\
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,\
   concurrency-*,\
+  -concurrency-mt-unsafe, \
   linuxkernel-*,\
   llvm-*,\
   misc-*,\

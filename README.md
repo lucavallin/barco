@@ -33,6 +33,8 @@ In other environments (GitHub Actions, local...), the following script must be r
 $ sudo ./scripts/install.sh
 ```
 
+`barco` relies on low-level Linux features, so it must be run on a Linux system. I found [getutm.app](https://getutm.app) to work well on my Mac.
+
 ## Build
 
 The included `Makefile` provides a few targets to build `barco`.
@@ -40,8 +42,10 @@ The variable `debug=1` can be set to run any of the targets in "debug" mode, whi
 The debug build is especially useful for the debugger, valgrind and objdump.
 
 ```bash
-# Build the program
+# Build the program (executable is in bin/)
+# The default target also runs "make libs" to build third-party libraries, "make lint" to lint the code and "make format" to format the code
 $ make
+
 
 # Build the program with debug flags
 $ make debug=1
@@ -50,23 +54,14 @@ $ make debug=1
 Other targets are available to run a number of tools:
 
 ```bash
-# Build third-party libraries
-$ make libs
-
-# Lint the code
-$ make lint
-
-# Format the code
-$ make format
-
 # Run valgrind
-$ make valgrind
+$ make check
 
-# Run the lldb debugger
-$ make debugger
+# Run the debugger
+$ make debug
 
 # Run objdump
-$ make objdump
+$ make asm
 
 # Clean the build
 $ make clean
@@ -77,6 +72,7 @@ The project uses the following third-party libraries:
 
 - `libseccomp-dev`: used to set up seccomp filters
 - `libcap-dev`: used to set container capabilities
+- `libbsd-dev`: used for `strlcpy`
 - [argtable](http://argtable.org/): used to parse command line arguments
 - [rxi/log.c](https://github.com/rxi/log.c): used for logging
 
@@ -88,7 +84,6 @@ The project is structured as follows:
 ├── .vscode             configuration for Visual Studio Code
 ├── bin                 the executable (created by make)
 ├── build               intermediate build files e.g. *.o (created by make)
-├── data                data files e.g. container image
 ├── docs                documentation
 ├── include             header files
 ├── lib                 third-party libraries
@@ -107,18 +102,18 @@ The project is structured as follows:
 
 ## Tools
 
-The project is developed using the following tools, which are installed by default on the Codespace.
+The project is developed using the following tools, which are installed with the provided scripts.
 
-- Visual Studio Code. The settings are included in the `.vscode` directory.
-- `GitHub Codespaces` is used to develop the project.
 - `make` is used to build the project.
 - `clang` is the compiler of choice.
 - `clangd` is used to provide code completion and navigation.
 - `clang-tidy` is used to lint the code.
 - `clang-format` is used to format the code.
-- `valgrind` is used to check for memory leaks.
 - `lldb` is used to debug the code.
-- `objdump` is used to inspect the binary.
+- `valgrind` is used to check for memory leaks.
+- `llvm-objdump` is used to inspect the binary.
+
+Notice: all LLVM-based tools are configured to use the LLVM 18 toolchain.
 
 ## Testing and documentation
 
@@ -138,8 +133,6 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 ## Improvements
 
 - [ ] Move print statements to main?
-- [ ] Use log.c
-- [ ] Address linting issues
-- [ ] Use CMake and Vcpkg
 - [ ] Review code documentation
-- [ ] Can I remove goto statements?
+- [ ] Use CMake and Conan
+- [ ] Problems: cgroupsv1, broken sockets, ...

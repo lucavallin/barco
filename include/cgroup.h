@@ -8,8 +8,7 @@
 #define CGROUP_SHARES "256"
 #define CGROUP_PIDS "64"
 #define CGROUP_WEIGHT "10"
-#define CGROUP_FD_COUNT 64
-#define CGROUP_CONTROL_FIELD_SIZE 256
+enum { CGROUP_FD_COUNT = 64, CGROUP_CONTROL_FIELD_SIZE = 256 };
 
 // Initializes cgroup for the container
 int cgroup_init(container_config *config);
