@@ -9,11 +9,6 @@
 #include <unistd.h>
 
 enum {
-  // BASE_10 is the base of the number system,
-  // used to convert a string to a number.
-  BASE_10 = 10,
-  // HOSTNAME_LEN is the length of the hostname
-  HOSTNAME_LEN = 32,
   // ARGTABLE_ARG_MAX is the maximum number of arguments
   ARGTABLE_ARG_MAX = 20
 };
@@ -28,8 +23,6 @@ struct arg_end *end;
 int main(int argc, char **argv) {
   // used for container stack
   char *stack = 0;
-  // used for container hostname
-  char hostname[HOSTNAME_LEN];
   // used for container config
   container_config config = {0};
   // used for container pid
@@ -60,7 +53,6 @@ int main(int argc, char **argv) {
   if (help->count > 0) {
     printf("Usage: %s", progname);
     arg_print_syntax(stdout, argtable, "\n");
-    printf("Demonstrate command-line parsing in argtable3.\n\n");
     arg_print_glossary(stdout, argtable, "  %-25s %s\n");
     exitcode = 0;
     goto exit;
@@ -82,12 +74,12 @@ int main(int argc, char **argv) {
   config.hostname = "barcontainer";
 
   // Initialize a socket pair to communicate with the container
-  if (socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
+  if (!socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
     log_error("socket pair initilization failed: %m");
     exitcode = 1;
     goto exit;
   }
-  if (fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
+  if (!fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
     log_error("socket fcntl failed: %m");
     exitcode = 1;
     goto exit;
@@ -104,11 +96,11 @@ int main(int argc, char **argv) {
 
   // Prepare cgroups for the process tree (the container is a child of the
   // barco process)
-  cgroups_init(&config);
+  cgroups_init(config.hostname);
 
   // Initialize the container (calls clone() internally)
   // Stacks on most architectures grow downwards.
-  // NAMESPACE_STACK_SIZE gives us a pointer just below the end.
+  // CONTAINER_STACK_SIZE gives us a pointer just below the end.
   container_pid = container_init(&config, stack + CONTAINER_STACK_SIZE);
   if (container_pid == -1) {
     log_error("container_init failed");
@@ -128,14 +120,10 @@ int main(int argc, char **argv) {
 
 cleanup:
   // Clear resources (cgroups, stack, sockets)
-  cgroups_free(&config);
+  cgroups_free(config.hostname);
   free(stack);
-  if (sockets[0]) {
-    close(sockets[0]);
-  }
-  if (sockets[1]) {
-    close(sockets[1]);
-  }
+  close(sockets[0]);
+  close(sockets[1]);
 
 exit:
   arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));

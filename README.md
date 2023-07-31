@@ -11,9 +11,7 @@ of `namespaces`, for example,the `PID` namespace is used to isolate the process 
 - `capabilities`: are used to set limits on what uid 0 (root) can do.
 - `cgroups`: are used to limit the resources (e.g. memory, disk I/O, CPU-tme) that a process can use.
 
-Settings for `seccomp` and `capabilities` are handled via system calls. `cgroups` instead are handled via the `cgroupfs` virtual file system.
-The scope of each of these features is somewhat unclear, and there is some overlap between them. The feature `user namespaces` should
-help with this, but it is not available on all systems as it can be a security risk. `barco` tries to prevent nested `user namespaces` and only uses the feature if available.
+Settings for `seccomp` and `capabilities` are handled via system calls, while `cgroups` are handled via the `cgroupfs` virtual file system.
 
 ## Usage
 
@@ -28,11 +26,11 @@ GitHub Codespaces is configured automatically with all the tools needed for deve
 In other environments (GitHub Actions, local...), the following script must be run before building the project to install the required tools:
 
 ```bash
-# Install the tools
-$ sudo ./scripts/install.sh
+# Install required tooling
+$ sudo ./scripts/setup.sh
 ```
 
-`barco` relies on low-level Linux features, so it must be run on a Linux system. I found [getutm.app](https://getutm.app) to work well on my Mac.
+`barco` relies on low-level Linux features, so it must be run on a Linux system. I found [getutm.app](https://getutm.app) to work well with [Debian](http://debian.org) on my Mac.
 
 ## Build
 
@@ -135,6 +133,5 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 - [ ] Re-architect code, see Linux manuals
 - [ ] Add support for cgroupsv2
 - [ ] Review documentation
-- [ ] Consolidate README.md
 - [ ] Use CMake and Conan
 - [ ] Short-term problems: broken sockets, ...
