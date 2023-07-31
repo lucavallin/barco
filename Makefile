@@ -11,7 +11,7 @@ BIN_ARGS_0 := -h
 BIN_ARGS_1 := -u 0 -m . -c /bin/sh
 
 # -- Barco Objects --
-OBJS := $(BIN).o cgroup.o container.o namespace.o
+OBJS := $(BIN).o cgroups.o container.o
 
 # -- Libraries Settings --
 LIB_ARGTABLE_NAME := argtable3

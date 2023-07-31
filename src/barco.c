@@ -1,10 +1,12 @@
-#include "../include/cgroup.h"
+#include "../include/cgroups.h"
 #include "../include/container.h"
-#include "../include/namespace.h"
 #include "../lib/argtable/argtable3.h"
 #include "../lib/log.c/src/log.h"
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 enum {
   // BASE_10 is the base of the number system,
@@ -54,7 +56,7 @@ int main(int argc, char **argv) {
   int nerrors;
   nerrors = arg_parse(argc, argv, argtable);
 
-  /* special case: '--help' takes precedence over error reporting */
+  // special case: '--help' takes precedence over error reporting
   if (help->count > 0) {
     printf("Usage: %s", progname);
     arg_print_syntax(stdout, argtable, "\n");
@@ -64,9 +66,9 @@ int main(int argc, char **argv) {
     goto exit;
   }
 
-  /* If the parser returned any errors then display them and exit */
+  // If the parser returned any errors then display them and exit
   if (nerrors > 0) {
-    /* Display the error details contained in the arg_end struct.*/
+    // Display the error details contained in the arg_end struct.
     arg_print_errors(stdout, end, progname);
     printf("Try '%s --help' for more information.\n", progname);
     exitcode = 1;
@@ -80,31 +82,34 @@ int main(int argc, char **argv) {
   config.hostname = "barcontainer";
 
   // Initialize a socket pair to communicate with the container
-  if (namespace_socket_pair_init(sockets) != 0) {
-    log_error("namespace_socket_pair_init failed");
+  if (socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
+    log_error("socket pair initilization failed: %m");
+    exitcode = 1;
+    goto exit;
+  }
+  if (fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
+    log_error("socket fcntl failed: %m");
     exitcode = 1;
     goto exit;
   }
   config.fdr = sockets[1];
 
   // Initialize a stack for the container
-  if (namespace_stack_init(&stack) != 0) {
-    log_error("namespace_stack_init failed");
+  stack = malloc(CONTAINER_STACK_SIZE);
+  if (!*stack) {
+    log_error("container stack initilization failed");
     exitcode = 1;
     goto cleanup;
   }
 
-  // Prepare cgroup for the process tree (the container is a child of the
+  // Prepare cgroups for the process tree (the container is a child of the
   // barco process)
-  if (cgroup_init(&config)) {
-    exitcode = 1;
-    goto cleanup;
-  }
+  cgroups_init(&config);
 
   // Initialize the container (calls clone() internally)
   // Stacks on most architectures grow downwards.
   // NAMESPACE_STACK_SIZE gives us a pointer just below the end.
-  container_pid = container_init(&config, stack + NAMESPACE_STACK_SIZE);
+  container_pid = container_init(&config, stack + CONTAINER_STACK_SIZE);
   if (container_pid == -1) {
     log_error("container_init failed");
     exitcode = 1;
@@ -113,25 +118,24 @@ int main(int argc, char **argv) {
 
   // Configures the container's user namespace and
   // pause until its process tree exits
-  if (namespace_set_uid_map(container_pid, sockets[0])) {
-    exitcode = 1;
-    goto stop_and_destroy_container;
-  }
-  goto destroy_container;
+  container_update_map(container_pid, sockets[0]);
 
-stop_and_destroy_container:
   if (container_pid) {
     container_stop(container_pid);
   }
 
-destroy_container:
   exitcode |= container_destroy(container_pid);
 
 cleanup:
-  // Clear resources (cgroup, stack, sockets)
-  cgroup_free(&config);
+  // Clear resources (cgroups, stack, sockets)
+  cgroups_free(&config);
   free(stack);
-  namespace_socket_pair_close(sockets);
+  if (sockets[0]) {
+    close(sockets[0]);
+  }
+  if (sockets[1]) {
+    close(sockets[1]);
+  }
 
 exit:
   arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
