@@ -355,18 +355,3 @@ int container_destroy(int container_pid) {
   waitpid(container_pid, &child_status, 0);
   return WEXITSTATUS(child_status);
 }
-
-void container_hostname_generate(char *hostname) {
-  int len = sizeof(hostname);
-  char chars[] =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-
-  srand(time(0));
-  for (int i = 0; i < len; i++) {
-    int chars_len = sizeof(chars) - 1;
-    int randomIndex = (int)rand() % chars_len;
-    hostname[i] = chars[randomIndex];
-  }
-  // null terminate the string
-  hostname[len] = '\0';
-}

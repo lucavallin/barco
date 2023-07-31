@@ -132,7 +132,10 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Improvements
 
-- [ ] Move print statements to main?
-- [ ] Review code documentation
+- [ ] Move error-based logging to a main
+- [ ] Re-architect code, see Linux manuals
+- [ ] Add support for cgroupsv2
+- [ ] Review documentation
+- [ ] Consolidate README.md
 - [ ] Use CMake and Conan
-- [ ] Problems: cgroupsv1, broken sockets, ...
+- [ ] Short-term problems: broken sockets, ...

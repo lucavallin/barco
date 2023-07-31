@@ -42,13 +42,11 @@ struct cgrp_control *cgrps[] = {
                                                   .name = "cpu.shares",
                                                   .value = CGROUP_SHARES},
                                               &add_to_tasks, NULL}},
-    &(struct cgrp_control){.control = "pids",
-                           .settings =
-                               (struct cgrp_setting *[]){
-                                   &(struct cgrp_setting){.name = "pids.max",
-                                                          .value = CGROUP_PIDS},
-                                   &add_to_tasks, NULL}},
-    NULL};
+    &(struct cgrp_control){
+        .control = "pids",
+        .settings = (struct cgrp_setting *[]){
+            &(struct cgrp_setting){.name = "pids.max", .value = CGROUP_PIDS},
+            &add_to_tasks, NULL}}};
 
 // cgroup settings are written to the cgroup v1 filesystem as follows:
 // - create a directory for the cgroup

@@ -76,14 +76,8 @@ int main(int argc, char **argv) {
   config.cmd = cmd->sval;
   config.mount_dir = img->sval;
 
-  // Here we could check that the Linux version is between 4.7.x and 4.8.x on
-  // x86_64 with e.g. version_check() in src/version.c. Since we might want to
-  // block system calls and capabilities, we need to make sure there are not new
-  // ones.
-
-  // Set hostname for the container to a random string
-  container_hostname_generate(hostname);
-  config.hostname = hostname;
+  // Set hostname for the container to "barcontainer"
+  config.hostname = "barcontainer";
 
   // Initialize a socket pair to communicate with the container
   if (namespace_socket_pair_init(sockets) != 0) {
