@@ -74,20 +74,24 @@ int main(int argc, char **argv) {
   config.hostname = "barcontainer";
 
   // Initialize a socket pair to communicate with the container
+  log_debug("initializing socket pair...");
   if (socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
     log_error("socket pair initilization failed: %m");
     exitcode = 1;
     goto exit;
   }
+
+  log_debug("setting socket flags...");
   if (fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
     log_error("socket fcntl failed: %m");
     exitcode = 1;
     goto exit;
   }
-  config.fdr = sockets[1];
+  config.fd = sockets[1];
 
   // Initialize a stack for the container
   // Allocate memory for the container stack
+  log_debug("initializing container stack...");
   if (!(stack = malloc(CONTAINER_STACK_SIZE))) {
     log_error("container stack initilization failed");
     exitcode = 1;
@@ -96,13 +100,19 @@ int main(int argc, char **argv) {
 
   // Prepare cgroups for the process tree (the container is a child of the
   // barco process)
-  cgroups_init(config.hostname);
+  log_debug("initializing cgroups...");
+  if (cgroups_init(config.hostname)) {
+    log_error("cgroups initilization failed");
+    exitcode = 1;
+    goto cleanup;
+  }
 
   // Initialize the container (calls clone() internally)
   // Stacks on most architectures grow downwards.
   // CONTAINER_STACK_SIZE gives us a pointer just below the end.
-  container_pid = container_init(&config, stack + CONTAINER_STACK_SIZE);
-  if (container_pid == -1) {
+  log_debug("initializing container...");
+  if ((container_pid = container_init(&config, stack + CONTAINER_STACK_SIZE)) ==
+      -1) {
     log_error("container_init failed");
     exitcode = 1;
     goto cleanup;
@@ -110,16 +120,21 @@ int main(int argc, char **argv) {
 
   // Configures the container's user namespace and
   // pause until its process tree exits
-  container_update_map(container_pid, sockets[0]);
-
-  if (container_pid) {
+  // container_update_map(container_pid, sockets[0]);
+  log_debug("updating map...");
+  if (container_update_map(container_pid, &(config.fd))) {
+    exitcode = 1;
+    log_error("container_update_map failed, stopping container...");
     container_stop(container_pid);
   }
 
-  exitcode |= container_destroy(container_pid);
+  // Wait for the container to exit
+  log_debug("waiting for container to exit...");
+  exitcode |= container_wait(container_pid);
 
 cleanup:
   // Clear resources (cgroups, stack, sockets)
+  log_debug("cleaning up...");
   cgroups_free(config.hostname);
   free(stack);
   close(sockets[0]);

@@ -9,6 +9,7 @@ FormatStyle: file
 Checks: "-*,\
   bugprone-*,\
   -bugprone-easily-swappable-parameters, \
+  -bugprone-assignment-in-if-condition, \
   cert-*,\
   -cert-msc30-c, \
   -cert-msc32-c, \
@@ -24,4 +25,5 @@ Checks: "-*,\
   modernize-*,\
   performance-*,\
   portability-*,\
-  readability-*"
+  readability-*, \
+  -readability-identifier-length"

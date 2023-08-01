@@ -33,13 +33,13 @@ int container_set_userns(container_config *config) {
   int result = 0;
 
   log_debug("trying a user namespace...");
-  if (write(config->fdr, &has_userns, sizeof(has_userns)) !=
+  if (write(config->fd, &has_userns, sizeof(has_userns)) !=
       sizeof(has_userns)) {
     log_error("could not write: %m");
     return -1;
   }
 
-  if (read(config->fdr, &result, sizeof(result)) != sizeof(result)) {
+  if (read(config->fd, &result, sizeof(result)) != sizeof(result)) {
     log_error("could not read: %m");
     return -1;
   }
@@ -126,8 +126,8 @@ int container_set_capabilities(void) {
   }
 
   log_debug("inheritable...");
-  cap_t caps = cap_get_proc();
-  if (!caps ||
+  cap_t caps = NULL;
+  if (!(caps = cap_get_proc()) ||
       cap_set_flag(caps, CAP_INHERITABLE, num_caps, drop_caps, CAP_CLEAR) ||
       cap_set_proc(caps)) {
     log_error("failed: %m");
@@ -197,7 +197,7 @@ int container_set_mounts(container_config *config) {
 
   char *old_root_dir = basename(inner_mount_dir);
   char old_root[sizeof(inner_mount_dir) + 1] = {"/"};
-  strlcpy(&old_root[1], old_root_dir, sizeof(old_root) - 1);
+  strlcpy(&old_root[1], old_root_dir, sizeof(old_root));
 
   log_debug("unmounting old root...");
   if (chdir("/")) {
@@ -229,9 +229,9 @@ int container_set_mounts(container_config *config) {
 // - available only on particular architectures
 // - newer versions or aliases of other syscalls
 int container_set_syscalls(void) {
-  scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+  scmp_filter_ctx ctx = NULL;
   log_debug("filtering syscalls...");
-  if (!ctx ||
+  if (!(ctx = seccomp_init(SCMP_ACT_ALLOW)) ||
       // Calls that allow creating new setuid / setgid executables.
       // The contained process could created a setuid binary that can be used
       // by an user to get root in absence of user namespaces.
@@ -316,17 +316,20 @@ int container_start(void *arg) {
   if (sethostname(config->hostname, strlen(config->hostname)) ||
       container_set_mounts(config) || container_set_userns(config) ||
       container_set_capabilities() || container_set_syscalls()) {
-    close(config->fdr);
+    close(config->fd);
     return -1;
   }
-  if (close(config->fdr)) {
+
+  if (close(config->fd)) {
     log_error("close failed: %m");
     return -1;
   }
-  if (execve(*config->cmd, NULL, NULL)) {
+
+  if (execve(config->cmd[0], config->cmd, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }
+
   return 0;
 }
 
@@ -334,60 +337,71 @@ int container_start(void *arg) {
 // e.g. mount to different dir, different hostname, etc...
 // All these requirements are specified by the flags we pass to clone()
 int container_init(container_config *config, char *stack) {
+  int container_pid = 0;
   // The flags namespace the mounts, pids, IPC data structures, network devices
   // and hostname.
   int flags = CLONE_NEWNS | CLONE_NEWCGROUP | CLONE_NEWPID | CLONE_NEWIPC |
               CLONE_NEWNET | CLONE_NEWUTS;
 
   // SIGCHLD lets us wait on the child process.
-  int container_pid = clone(container_start, stack, flags | SIGCHLD, &config);
+  if ((container_pid =
+           clone(container_start, stack, flags | SIGCHLD, config)) == -1) {
+    log_error("clone failed: %m");
+    return 1;
+  }
 
-  // Close and zero the child's socket, to avoid leaving an open fdr in
+  // Close and zero the child's socket, to avoid leaving an open fd in
   // case of a failure. If we do not do this, the child or parent might hang.
-  close(config->fdr);
-  config->fdr = 0;
+  close(config->fd);
+  config->fd = 0;
 
   return container_pid;
 }
 
 void container_stop(int container_pid) { kill(container_pid, SIGKILL); }
 
-int container_destroy(int container_pid) {
-  int child_status = 0;
-  waitpid(container_pid, &child_status, 0);
-  return WEXITSTATUS(child_status);
+int container_wait(int container_pid) {
+  int container_status = 0;
+  waitpid(container_pid, &container_status, 0);
+  return WEXITSTATUS(container_status);
 }
 
-int container_update_map(pid_t container_pid, int fdr) {
+int container_update_map(pid_t container_pid, int *fd) {
   int uid_map = 0;
-  char path[PATH_MAX] = {0};
+  int has_userns = -1;
 
-  for (char **file = (char *[]){"uid_map", "gid_map", 0}; *file; file++) {
-    if (snprintf(path, sizeof(path), "/proc/%d/%s", container_pid, *file) >
-        (int)sizeof(path)) {
-      log_error("snprintf might be too big");
-      return -1;
-    }
-
-    log_debug("writing %s...", path);
-    uid_map = open(path, O_WRONLY);
-    if (uid_map == -1) {
-      log_error("open failed: %m");
-      return -1;
-    }
-
-    // if (dprintf(uid_map, "0 %d %d\n", NAMESPACE_USERNS_OFFSET,
-    //             NAMESPACE_USERNS_COUNT) == -1) {
-    //   log_error("dprintf failed: %m");
-    //   close(uid_map);
-    //   return -1;
-    // }
-
-    close(uid_map);
+  if (read(*fd, &has_userns, sizeof(has_userns)) != sizeof(has_userns)) {
+    log_error("read failed: %m");
+    return -1;
   }
 
-  if (write(fdr, &(int){0}, sizeof(int)) != sizeof(int)) {
-    log_error("could not write: %m");
+  if (has_userns) {
+    char path[PATH_MAX] = {0};
+
+    for (char **file = (char *[]){"uid_map", "gid_map", 0}; *file; file++) {
+      if (snprintf(path, sizeof(path), "/proc/%d/%s", container_pid, *file) >
+          sizeof(path)) {
+        log_error("snprintf failed: %m");
+        return -1;
+      }
+
+      log_debug("writing %s...", path);
+      if ((uid_map = open(path, O_WRONLY)) == -1) {
+        log_error("open failed: %m");
+        return -1;
+      }
+      if (dprintf(uid_map, "0 %d %d\n", CONTAINER_USERNS_OFFSET,
+                  CONTAINER_USERNS_COUNT) == -1) {
+        log_error("dprintf failed: %m");
+        close(uid_map);
+        return -1;
+      }
+      close(uid_map);
+    }
+  }
+
+  if (write(*fd, &(int){0}, sizeof(int)) != sizeof(int)) {
+    log_error("write failed: %m");
     return -1;
   }
 

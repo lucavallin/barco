@@ -11,7 +11,8 @@ of `namespaces`, for example,the `PID` namespace is used to isolate the process 
 - `capabilities`: are used to set limits on what uid 0 (root) can do.
 - `cgroups`: are used to limit the resources (e.g. memory, disk I/O, CPU-tme) that a process can use.
 
-Settings for `seccomp` and `capabilities` are handled via system calls, while `cgroups` are handled via the `cgroupfs` virtual file system.
+Settings for `seccomp` and `capabilities` are handled via system calls, while `cgroups` are handled via the `cgroupfs` virtual file system. The scope of each of these features is somewhat unclear, and there is some overlap between them. The feature `user namespaces` should
+help with this, but it is not available on all systems as it can be a security risk. `barco` tries to prevent nested `user namespaces` and only uses the feature if available.
 
 ## Usage
 
@@ -136,8 +137,8 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Todo
 
-- [ ] Move error-based logging to main
-- [ ] Re-architect code, see Linux manuals
-- [ ] Add support for cgroupsv2
-- [ ] Review documentation
-- [ ] Short-term problems: broken sockets, ...
+- Improve logging
+- Add support for cgroupsv2
+- Review documentation
+- Split security, namespaces
+- Check config struct, how fields are passed, fd

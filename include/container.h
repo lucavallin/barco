@@ -18,7 +18,7 @@ enum {
 // Represents the configuration for a container.
 typedef struct container_config {
   uid_t uid;
-  int fdr;
+  int fd;
   char *hostname;
   const char **cmd;
   const char **mount_dir;
@@ -28,12 +28,12 @@ typedef struct container_config {
 int container_init(container_config *config, char *stack);
 
 // Configures the container's user namespace
-int container_update_map(pid_t container_pid, int fdr);
+int container_update_map(pid_t container_pid, int *fd);
 
 // Stops the container.
 void container_stop(int container_pid);
 
 // Destroys the container.
-int container_destroy(int container_pid);
+int container_wait(int container_pid);
 
 #endif
