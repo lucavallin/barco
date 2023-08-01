@@ -1,5 +1,5 @@
 #include "../include/cgroups.h"
-#include "../lib/log/src/log.h"
+#include "../lib/log/log.h"
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <stdio.h>

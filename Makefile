@@ -13,14 +13,16 @@ BARCO_ARGS_0 := --help
 BARCO_ARGS_1 := -u 0 -m . -c /bin/sh
 
 # Libraries settings
+LIB_ARGTABLE_REPO := https://github.com/argtable/argtable3/releases/download/v3.2.2.f25c624/argtable-v3.2.2.f25c624-amalgamation.tar.gz
 LIB_ARGTABLE_NAME := argtable3
 LIB_ARGTABLE_PATH := $(LIB_DIR)/argtable/argtable3.c
+LIB_LOG_REPO := https://github.com/rxi/log.c/archive/refs/heads/master.zip
 LIB_LOG_NAME := log
-LIB_LOG_PATH := $(LIB_DIR)/log/src/log.c
+LIB_LOG_PATH := $(LIB_DIR)/log/log.c
 LIB_LOG_FLAGS := -DLOG_USE_COLOR
 
 # Barco object files
-OBJS := $(BARCO).o cgroups.o container.o argtable3.o log.o
+OBJS := $(BARCO).o cgroups.o container.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
 
 # Compiler settings
 CC := clang-18 --config ./clang.cfg
@@ -80,29 +82,37 @@ asm: dir $(BARCO).o
 # Setup dependencies for build and development
 setup:
 	# Update apt and upgrade packages
-	sudo apt update
-	sudo apt upgrade -y
+	@sudo apt update
+	@sudo apt upgrade -y
 
 	# Install OS dependencies
-	sudo apt install -y bash libarchive-tools lsb-release wget software-properties-common gnupg
+	@sudo apt install -y bash libarchive-tools lsb-release wget software-properties-common gnupg
 
 	# Install LLVM tools required for building the project
-	wget https://apt.llvm.org/llvm.sh
-	chmod +x llvm.sh
-	sudo ./llvm.sh 18
-	rm llvm.sh
+	@wget https://apt.llvm.org/llvm.sh
+	@chmod +x llvm.sh
+	@sudo ./llvm.sh 18
+	@rm llvm.sh
 
 	# Install Clang development tools
-	sudo apt install -y clang-format-18 clang-tidy-18 clang-tools clangd valgrind
+	@sudo apt install -y clang-format-18 clang-tidy-18 clang-tools clangd valgrind
 
-	# Install C dependencies
-	sudo apt install -y libseccomp-dev libcap-dev libbsd-dev
+	# Install non-standard system libraries
+	@sudo apt install -y libseccomp-dev libcap-dev libbsd-dev
 
 	# Install CUnit testing framework
-	sudo apt install -y libcunit1 libcunit1-doc libcunit1-dev
+	@sudo apt install -y libcunit1 libcunit1-doc libcunit1-dev
+
+	# Install third-party libraries and structure them
+	@mkdir -p $(LIB_DIR)/argtable $(LIB_DIR)/log
+	@echo "Installing argtable..."
+	@wget -qO- $(LIB_ARGTABLE_REPO) | bsdtar -xvf- --strip=1 -C $(LIB_DIR)/argtable *.c *.h 2> /dev/null
+	@find $(LIB_DIR)/argtable/* -d -type d -exec rm -rf '{}' \; 2> /dev/null
+	@echo "Installing log..."
+	@wget -qO- $(LIB_LOG_REPO) | bsdtar -xvf- --strip=2 -C $(LIB_DIR)/log *.c *.h 2> /dev/null
 
 	# Cleanup
-	sudo apt autoremove -y
+	@sudo apt autoremove -y
 
 # Setup build and bin directories
 dir:
@@ -112,4 +122,4 @@ dir:
 clean:
 	@rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-.PHONY: test lint format check debug asm setup dir clean
+.PHONY: lint format check debug asm setup dir clean deps
