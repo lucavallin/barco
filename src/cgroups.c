@@ -1,4 +1,5 @@
 #include "../include/cgroups.h"
+#include "../lib/log/log.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/limits.h>
@@ -64,7 +65,7 @@ int cgroups_init(char *hostname) {
              hostname);
 
     if (mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR) && errno != EEXIST) {
-      perror("mkdir");
+      log_error("mkdir failed: %s", strerror(errno));
       return -1;
     }
 
@@ -75,11 +76,11 @@ int cgroups_init(char *hostname) {
 
       f = fopen(path, "w");
       if (!f) {
-        perror("fopen");
+        log_error("fopen failed: %s", strerror(errno));
         return -1;
       }
       if (fprintf(f, "%s", (*setting)->value) < 0) {
-        perror("fprintf");
+        log_error("fprintf failed: %s", strerror(errno));
         fclose(f);
         return -1;
       }
@@ -92,7 +93,7 @@ int cgroups_init(char *hostname) {
                                    .rlim_max = CGROUPS_FD_COUNT,
                                    .rlim_cur = CGROUPS_FD_COUNT,
                                })) {
-    perror("setrlimit");
+    log_error("setrlimit failed: %s", strerror(errno));
     return 1;
   }
 
@@ -111,11 +112,11 @@ int cgroups_free(char *hostname) {
     // Move the container process back into the root task (pid 1)
     f = fopen(path, "w");
     if (!f) {
-      perror("fopen");
+      log_error("fopen failed: %s", strerror(errno));
       return -1;
     }
     if (fprintf(f, "0") < 0) {
-      perror("fprintf");
+      log_error("fprintf failed: %s", strerror(errno));
       fclose(f);
       return -1;
     }
@@ -123,14 +124,14 @@ int cgroups_free(char *hostname) {
 
     // Remove the process tree from the cgroup
     if (rmdir(path)) {
-      perror("rmdir");
+      log_error("rm failed: %s", strerror(errno));
       return -1;
     }
   }
 
   // Unmount the cgroup hierarchy
   if (umount("/sys/fs/cgroup")) {
-    perror("umount");
+    log_error("umount failed: %s", strerror(errno));
     return -1;
   }
 
