@@ -74,12 +74,12 @@ int main(int argc, char **argv) {
   config.hostname = "barcontainer";
 
   // Initialize a socket pair to communicate with the container
-  if (!socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
+  if (socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
     log_error("socket pair initilization failed: %m");
     exitcode = 1;
     goto exit;
   }
-  if (!fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
+  if (fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
     log_error("socket fcntl failed: %m");
     exitcode = 1;
     goto exit;
@@ -87,8 +87,8 @@ int main(int argc, char **argv) {
   config.fdr = sockets[1];
 
   // Initialize a stack for the container
-  stack = malloc(CONTAINER_STACK_SIZE);
-  if (!*stack) {
+  // Allocate memory for the container stack
+  if (!(stack = malloc(CONTAINER_STACK_SIZE))) {
     log_error("container stack initilization failed");
     exitcode = 1;
     goto cleanup;

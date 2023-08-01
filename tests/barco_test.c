@@ -1,6 +1,8 @@
 #include <CUnit/Basic.h>
 #include <CUnit/CUError.h>
 #include <CUnit/CUnit.h>
+#include <CUnit/TestDB.h>
+#include <stdio.h>
 
 int barco_suite_init(void) { return 0; }
 int barco_suite_clean(void) { return 0; }

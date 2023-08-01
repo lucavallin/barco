@@ -323,7 +323,7 @@ int container_start(void *arg) {
     log_error("close failed: %m");
     return -1;
   }
-  if (execve(*config->cmd, config->cmd, NULL)) {
+  if (execve(*config->cmd, NULL, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }

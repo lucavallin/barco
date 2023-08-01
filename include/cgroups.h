@@ -2,10 +2,10 @@
 #define CGROUPS_H
 
 // Used for cgroups limits initialization
-#define CGROUPS_MEMORY "1073741824"
-#define CGROUPS_SHARES "256"
-#define CGROUPS_PIDS "64"
-#define CGROUPS_WEIGHT "10"
+#define CGROUP_MEMORY_MAX "1G"
+#define CGROUP_MEMORY_OOM_MAX "1G"
+#define CGROUP_CPU_WEIGHT "256"
+#define CGROUP_PIDS_MAX "64"
 enum { CGROUPS_FD_COUNT = 64, CGROUPS_CONTROL_FIELD_SIZE = 256 };
 
 // Initializes cgroups for the hostname

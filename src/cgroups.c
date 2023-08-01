@@ -1,137 +1,138 @@
 #include "../include/cgroups.h"
-#include "../lib/log/log.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/mount.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 struct cgrp_control {
-  char control[CGROUPS_CONTROL_FIELD_SIZE];
+  char control[CGROUPS_CONTROL_FIELD_SIZE]; // Adjust the size based on your
+                                            // needs
   struct cgrp_setting {
-    char name[CGROUPS_CONTROL_FIELD_SIZE];
-    char value[CGROUPS_CONTROL_FIELD_SIZE];
+    char
+        name[CGROUPS_CONTROL_FIELD_SIZE]; // Adjust the size based on your needs
+    char value[CGROUPS_CONTROL_FIELD_SIZE]; // Adjust the size based on your
+                                            // needs
   } **settings;
 };
 
 struct cgrp_setting add_to_tasks = {.name = "tasks", .value = "0"};
 
-// Cgroups let us limit resources allocated to a process to prevent it from
-// dying services to the rest of the system. The cgroups must be created before
-// the container enters a cgroups namespace. The following settings are applied:
-// - memory.limit_in_bytes: 1GB (container memory limit)
-// - memory.kmem.limit_in_bytes: 1GB (kernel memory limit)
-// - cpu.shares: 256 (a quarter of the CPU time)
-// - pids.max: 64 (max number of processes)
-// - blkio.weight: 50 (I/O priority, lower than the rest of the system and
-// prioritized accordingly)
 struct cgrp_control *cgrps[] = {
     &(struct cgrp_control){
         .control = "memory",
         .settings =
             (struct cgrp_setting *[]){
-                &(struct cgrp_setting){.name = "memory.limit_in_bytes",
-                                       .value = CGROUPS_MEMORY},
+                &(struct cgrp_setting){.name = "memory.max",
+                                       .value = CGROUP_MEMORY_MAX},
+                &(struct cgrp_setting){.name = "memory.oom.max",
+                                       .value = CGROUP_MEMORY_OOM_MAX},
                 &add_to_tasks, NULL}},
     &(struct cgrp_control){
         .control = "cpu",
         .settings = (struct cgrp_setting *[]){&(struct cgrp_setting){
-                                                  .name = "cpu.shares",
-                                                  .value = CGROUPS_SHARES},
+                                                  .name = "cpu.weight",
+                                                  .value = CGROUP_CPU_WEIGHT},
                                               &add_to_tasks, NULL}},
     &(struct cgrp_control){
         .control = "pids",
-        .settings = (struct cgrp_setting *[]){
-            &(struct cgrp_setting){.name = "pids.max", .value = CGROUPS_PIDS},
-            &add_to_tasks, NULL}}};
+        .settings = (struct cgrp_setting *[]){&(struct cgrp_setting){
+                                                  .name = "pids.max",
+                                                  .value = CGROUP_PIDS_MAX},
+                                              &add_to_tasks, NULL}},
+    NULL};
 
-// cgroups settings are written to the cgroups v1 filesystem as follows:
-// - create a directory for the cgroups
-// - write the settings to the cgroups files (each setting is a file)
-// - a pid can be added to tasks to add the process tree to the cgroups (pid 0
-// means the writing process)
 int cgroups_init(char *hostname) {
-  log_debug("setting cgroups...");
+  // Create the cgroup mount point
+  if (mount("cgroup2", "/sys/fs/cgroup", "cgroup2", 0, "")) {
+    perror("mount cgroup2");
+    return -1;
+  }
+
+  // Set resource limits using cgroupsv2 interface
+  FILE *f;
+  char path[PATH_MAX]; // Adjust the size based on your needs
 
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {
-    char dir[PATH_MAX] = {0};
+    snprintf(path, sizeof(path), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
+             hostname);
 
-    log_debug("%s...", (*cgrp)->control);
-    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroups/%s/%s", (*cgrp)->control,
-                 hostname) == -1) {
-      return -1;
-    }
-
-    if (mkdir(dir, S_IRUSR | S_IWUSR | S_IXUSR)) {
-      log_error("mkdir %s failed: %m\n", dir);
+    if (mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR) && errno != EEXIST) {
+      perror("mkdir");
       return -1;
     }
 
     for (struct cgrp_setting **setting = (*cgrp)->settings; *setting;
          setting++) {
-      char path[PATH_MAX] = {0};
-      int fdr = 0;
-      if (snprintf(path, sizeof(path), "%s/%s", dir, (*setting)->name) == -1) {
-        log_error("snprintf failed: %m");
-        return -1;
-      }
+      snprintf(path, sizeof(path), "/sys/fs/cgroup/%s/%s/%s", (*cgrp)->control,
+               hostname, (*setting)->name);
 
-      fdr = open(path, O_WRONLY);
-      if (fdr == -1) {
-        log_error("opening %s failed: %m\n", path);
+      f = fopen(path, "w");
+      if (!f) {
+        perror("fopen");
         return -1;
       }
-      if (write(fdr, (*setting)->value, strlen((*setting)->value)) == -1) {
-        log_error("writing to %s failed: %m\n", path);
-        close(fdr);
+      if (fprintf(f, "%s", (*setting)->value) < 0) {
+        perror("fprintf");
+        fclose(f);
         return -1;
       }
-
-      close(fdr);
+      fclose(f);
     }
   }
-  log_debug("done");
+
+  // The hard limit on the number of file descriptors is lowered.
+  if (setrlimit(RLIMIT_NOFILE, &(struct rlimit){
+                                   .rlim_max = CGROUPS_FD_COUNT,
+                                   .rlim_cur = CGROUPS_FD_COUNT,
+                               })) {
+    perror("setrlimit");
+    return 1;
+  }
 
   return 0;
 }
 
-// Clean up the cgroups for the container: the container process is moved back
-// into the root task. When the container exits, its process tree is removed and
-// the task is empty. Afterwards, rmdir can safely be run.
 int cgroups_free(char *hostname) {
-  log_debug("cleaning cgroups...");
+  // Clean up the cgroup for the container
+  FILE *f;
+  char path[PATH_MAX]; // Adjust the size based on your needs
+
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {
-    char dir[PATH_MAX] = {0};
-    char task[PATH_MAX] = {0};
-    int task_fd = 0;
+    snprintf(path, sizeof(path), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
+             hostname);
 
-    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroups/%s/%s", (*cgrp)->control,
-                 hostname) == -1 ||
-        snprintf(task, sizeof(task), "/sys/fs/cgroups/%s/tasks",
-                 (*cgrp)->control) == -1) {
-      log_error("snprintf failed: %m");
+    // Move the container process back into the root task (pid 1)
+    f = fopen(path, "w");
+    if (!f) {
+      perror("fopen");
       return -1;
     }
-
-    task_fd = open(task, O_WRONLY);
-    if (task_fd == -1) {
-      log_error("opening %s failed: %m", task);
+    if (fprintf(f, "0") < 0) {
+      perror("fprintf");
+      fclose(f);
       return -1;
     }
-    if (write(task_fd, "0", 2) == -1) {
-      log_error("writing to %s failed: %m", task);
-      close(task_fd);
-      return -1;
-    }
+    fclose(f);
 
-    close(task_fd);
-
-    if (rmdir(dir)) {
-      log_error("rmdir %s failed: %m", dir);
+    // Remove the process tree from the cgroup
+    if (rmdir(path)) {
+      perror("rmdir");
       return -1;
     }
   }
-  log_debug("done");
+
+  // Unmount the cgroup hierarchy
+  if (umount("/sys/fs/cgroup")) {
+    perror("umount");
+    return -1;
+  }
+
   return 0;
 }
