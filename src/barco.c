@@ -1,7 +1,7 @@
 #include "../include/cgroups.h"
 #include "../include/container.h"
 #include "../lib/argtable/argtable3.h"
-#include "../lib/log.c/src/log.h"
+#include "../lib/log/src/log.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>

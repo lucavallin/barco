@@ -1,5 +1,5 @@
 #include "../include/container.h"
-#include "../lib/log.c/src/log.h"
+#include "../lib/log/src/log.h"
 #include <asm-generic/ioctls.h>
 #include <bsd/string.h>
 #include <fcntl.h>

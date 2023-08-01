@@ -32,9 +32,19 @@ $ sudo apt install -y make
 $ make setup
 ```
 
-`make setup` installs the following build and development tools:
+### Dependencies
 
-- `make` is used to build the project.
+`barco` depends on the following "non-standard" libraries:
+
+- `libseccomp`: used to set up seccomp filters
+- `libcap`: used to set container capabilities
+- `libbsd`: used for `strlcpy`
+- `libcuni1`: used for testing with CUnit
+- [argtable](http://argtable.org/): used to parse command line arguments
+- [rxi/log.c](https://github.com/rxi/log.c): used for logging
+
+`barco` uses the following LLVM-18-based tools for development:
+
 - `clang` is the compiler of choice.
 - `clangd` is used to provide code completion and navigation.
 - `clang-tidy` is used to lint the code.
@@ -42,17 +52,6 @@ $ make setup
 - `lldb` is used to debug the code.
 - `valgrind` is used to check for memory leaks.
 - `llvm-objdump` is used to inspect the binary.
-
-All LLVM-based tools are configured to use the LLVM 18 toolchain.
-
-`make setup` also installs the following libraries:
-
-- `libseccomp-dev`: used to set up seccomp filters
-- `libcap-dev`: used to set container capabilities
-- `libbsd-dev`: used for `strlcpy`
-- [argtable](http://argtable.org/): used to parse command line arguments
-- [rxi/log.c](https://github.com/rxi/log.c): used for logging
-
 
 ## Build
 
@@ -74,6 +73,9 @@ $ make debug=1
 The included `Makefile` provides a few targets useful for development:
 
 ```bash
+# Run tests
+$ make test
+
 # Run valgrind
 $ make check
 
@@ -85,9 +87,6 @@ $ make asm
 
 # Clean the build
 $ make clean
-
-# Setup environment
-$ make setup
 ```
 
 ## Structure
@@ -142,4 +141,3 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 - [ ] Add support for cgroupsv2
 - [ ] Review documentation
 - [ ] Short-term problems: broken sockets, ...
-- [ ] Libs: install via Make
