@@ -1,7 +1,7 @@
 {
     "name": "barco",
     "image": "mcr.microsoft.com/devcontainers/universal",
-    "postCreateCommand": ".devcontainer/post-create-command.sh",
+    "postCreateCommand": "make setup",
     "customizations": {
         "vscode": {
             "extensions": [

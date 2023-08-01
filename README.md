@@ -18,37 +18,60 @@ Settings for `seccomp` and `capabilities` are handled via system calls, while `c
 `barco` can be used to run `bin/sh` in the current directory as `root`:
 
 ```bash
-$ sudo ./barco -m . -u 0 -c /bin/sh
+$ sudo ./bin/barco -m . -u 0 -c /bin/sh
 ```
 
 ## Setup
-GitHub Codespaces is configured automatically with all the tools needed for developing and building the project.
-In other environments (GitHub Actions, local...), the following script must be run before building the project to install the required tools:
+
+`barco` requires a number of tools and libraries to be installed to build the project and for development.
+`barco` relies on low-level Linux features, so it must be run on a Linux system. I found [getutm.app](https://getutm.app) to work well with [Debian](http://debian.org) on my Mac.
 
 ```bash
 # Install required tooling
-$ sudo ./scripts/setup.sh
+$ sudo apt install -y make
+$ make setup
 ```
 
-`barco` relies on low-level Linux features, so it must be run on a Linux system. I found [getutm.app](https://getutm.app) to work well with [Debian](http://debian.org) on my Mac.
+`make setup` installs the following build and development tools:
+
+- `make` is used to build the project.
+- `clang` is the compiler of choice.
+- `clangd` is used to provide code completion and navigation.
+- `clang-tidy` is used to lint the code.
+- `clang-format` is used to format the code.
+- `lldb` is used to debug the code.
+- `valgrind` is used to check for memory leaks.
+- `llvm-objdump` is used to inspect the binary.
+
+All LLVM-based tools are configured to use the LLVM 18 toolchain.
+
+`make setup` also installs the following libraries:
+
+- `libseccomp-dev`: used to set up seccomp filters
+- `libcap-dev`: used to set container capabilities
+- `libbsd-dev`: used for `strlcpy`
+- [argtable](http://argtable.org/): used to parse command line arguments
+- [rxi/log.c](https://github.com/rxi/log.c): used for logging
+
 
 ## Build
 
 The included `Makefile` provides a few targets to build `barco`.
-The variable `debug=1` can be set to run any of the targets in "debug" mode, which builds the project with the `-g` and `-O0` flags (the compiler includes debug symbols and disables optimizations for the executable and other objects).
+The variable `debug=1` can be set to run any of the targets in "debug" mode, which builds the project with the with debug symbols and without optimizations.
 The debug build is especially useful for the debugger, valgrind and objdump.
 
 ```bash
-# Build the program (executable is in bin/)
+# Build barco (executable is in bin/)
 # The default target also runs "make libs" to build third-party libraries, "make lint" to lint the code and "make format" to format the code
 $ make
 
 
-# Build the program with debug flags
+# Build barco with debug flags
 $ make debug=1
 ```
 
-Other targets are available to run a number of tools:
+## Development
+The included `Makefile` provides a few targets useful for development:
 
 ```bash
 # Run valgrind
@@ -62,18 +85,13 @@ $ make asm
 
 # Clean the build
 $ make clean
+
+# Setup environment
+$ make setup
 ```
 
-## Dependencies
-The project uses the following third-party libraries:
-
-- `libseccomp-dev`: used to set up seccomp filters
-- `libcap-dev`: used to set container capabilities
-- `libbsd-dev`: used for `strlcpy`
-- [argtable](http://argtable.org/): used to parse command line arguments
-- [rxi/log.c](https://github.com/rxi/log.c): used for logging
-
 ## Structure
+
 The project is structured as follows:
 ```
 ├── .devcontainer       configuration for GitHub Codespaces
@@ -92,25 +110,11 @@ The project is structured as follows:
 ├── .clang-format       configuration for clang-format
 ├── .cang-tidy          configuration for clang-tidy
 ├── .gitignore
+├── .clang.cfg          configuration for the compiler
 ├── LICENSE
 ├── Makefile
 └── README.md
 ```
-
-## Tools
-
-The project is developed using the following tools, which are installed with the provided scripts.
-
-- `make` is used to build the project.
-- `clang` is the compiler of choice.
-- `clangd` is used to provide code completion and navigation.
-- `clang-tidy` is used to lint the code.
-- `clang-format` is used to format the code.
-- `lldb` is used to debug the code.
-- `valgrind` is used to check for memory leaks.
-- `llvm-objdump` is used to inspect the binary.
-
-Notice: all LLVM-based tools are configured to use the LLVM 18 toolchain.
 
 ## Testing and documentation
 
@@ -129,9 +133,13 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Improvements
 
+- CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.
+
+## Todo
+
 - [ ] Move error-based logging to main
 - [ ] Re-architect code, see Linux manuals
 - [ ] Add support for cgroupsv2
 - [ ] Review documentation
-- [ ] Use CMake and Conan
 - [ ] Short-term problems: broken sockets, ...
+- [ ] Libs: install via Make
