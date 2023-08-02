@@ -38,6 +38,7 @@ etc         lib                 lost+found  proc        srv         var
 # echo "i am in a container"
 i am in a container
 # exit
+
 23:24:23 INFO /src/barco.c:150: cleaning up...
 28:24:23 INFO /sre/barco.c:164: so long and thanks for all the fish
 ```
@@ -70,7 +71,6 @@ $ make setup
 - `clangd` is used to provide code completion and navigation.
 - `clang-tidy` is used to lint the code.
 - `clang-format` is used to format the code.
-- `lldb` is used to debug the code.
 - `valgrind` is used to check for memory leaks.
 
 ## Build
@@ -81,7 +81,7 @@ The debug build is especially useful for the debugger and valgrind.
 
 ```bash
 # Build barco (executable is in bin/)
-# The default target also runs "make libs" to build third-party libraries, "make lint" to lint the code and "make format" to format the code
+# The default target also runs, "make lint" and "make format" to lint and format the code
 $ make
 
 
@@ -139,7 +139,7 @@ In the future, suitable tools for automated testing and documentation might be a
 
 ## Limitations
 
-barco does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
+`barco` does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
 
 - create a new network namespace
 - create a virtual ethernet pair
