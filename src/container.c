@@ -179,20 +179,20 @@ int container_set_mounts(container_config *config) {
   log_debug("remounted");
 
   log_debug("creating temporary directory and...");
-  char mount_dir[] = "/tmp/tmp.XXXXXX";
+  char mount_dir[] = "/tmp/barco";
   if (!mkdtemp(mount_dir)) {
     log_error("directory creation failed: %m");
     return -1;
   }
 
   log_debug("bind mount...");
-  if (mount(config->mount_dir, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
-    log_error("bind mount failed for path %s: %m", config->mount_dir);
+  if (mount(config->mnt, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
+    log_error("bind mount failed for path %s: %m", config->mnt);
     return -1;
   }
 
   log_debug("creating inner directory...");
-  char inner_mount_dir[] = "/tmp/tmp.XXXXXX/oldroot.XXXXXX";
+  char inner_mount_dir[] = "/tmp/barco/oldroot";
   memcpy(inner_mount_dir, mount_dir, sizeof(mount_dir) - 1);
   if (!mkdtemp(inner_mount_dir)) {
     log_error("creating inner directory failed: %m");
@@ -356,9 +356,8 @@ int container_start(void *arg) {
   }
 
   log_debug("executing requested command in container...");
-  // Null terminated string
-  char *argv[] = {config->cmd, NULL};
-  if (execve(config->cmd, argv, NULL)) {
+  // Set argv to NULL to avoid passing any arguments to the command
+  if (execve(config->cmd, &config->arg, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }

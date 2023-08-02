@@ -18,6 +18,7 @@ struct arg_lit *help, *version;
 struct arg_int *uid;
 struct arg_str *mnt;
 struct arg_str *cmd;
+struct arg_str *arg;
 struct arg_lit *vrb;
 struct arg_end *end;
 
@@ -38,9 +39,11 @@ int main(int argc, char **argv) {
           arg_litn(NULL, "version", 0, 1, "display version info and exit"),
       uid = arg_intn("u", "uid", "<n>", 1, 1, "set the uid of the container"),
       mnt = arg_strn("m", "mnt", "<s>", 1, 1,
-                     "set the mount path to use for the container"),
+                     "set the directory to mount as root in the container"),
       cmd = arg_strn("c", "cmd", "<s>", 1, 1,
                      "set the command to run in the container"),
+      arg = arg_strn("a", "arg", "<s>", 0, 1,
+                     "set the argument to pass to the command"),
       vrb = arg_litn("v", "verbosity", 0, 1, "verbose output"),
       end = arg_end(ARGTABLE_ARG_MAX),
   };
@@ -75,8 +78,9 @@ int main(int argc, char **argv) {
     log_set_level(LOG_TRACE);
   }
 
-  config.cmd = cmd->sval[0];
-  config.mount_dir = mnt->sval[0];
+  config.cmd = (char *)cmd->sval[0];
+  config.arg = (char *)arg->sval;
+  config.mnt = (char *)mnt->sval[0];
 
   // Set hostname for the container to "barcontainer"
   config.hostname = "barcontainer";
