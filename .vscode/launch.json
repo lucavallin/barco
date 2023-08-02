@@ -1,0 +1,25 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // See https://code.visualstudio.com/docs/cpp/launch-json-reference
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug",
+            "program": "${workspaceFolder}/bin/barco",
+            "args": [
+                "-u",
+                "0",
+                "-m",
+                ".",
+                "-c",
+                "/bin/bash"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build debug"
+        }
+    ]
+}

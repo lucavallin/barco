@@ -52,13 +52,12 @@ $ make setup
 - `clang-format` is used to format the code.
 - `lldb` is used to debug the code.
 - `valgrind` is used to check for memory leaks.
-- `llvm-objdump` is used to inspect the binary.
 
 ## Build
 
 The included `Makefile` provides a few targets to build `barco`.
 The variable `debug=1` can be set to run any of the targets in "debug" mode, which builds the project with the with debug symbols and without optimizations.
-The debug build is especially useful for the debugger, valgrind and objdump.
+The debug build is especially useful for the debugger and valgrind.
 
 ```bash
 # Build barco (executable is in bin/)
@@ -80,20 +79,17 @@ $ make test
 # Run valgrind
 $ make check
 
-# Run the debugger
-$ make debug
-
-# Run objdump
-$ make asm
-
 # Clean the build
 $ make clean
 ```
 
+Furthermore, the project includes a [Visual Studio Code](https://code.visualstudio.com/) configuration in `.vscode/` that can be used to run the built-in debugger.
+
 ## Structure
 
 The project is structured as follows:
-```
+
+```txt
 ├── .devcontainer       configuration for GitHub Codespaces
 ├── .github             configuration GitHub Actions and other GitHub features
 ├── .vscode             configuration for Visual Studio Code
@@ -122,7 +118,9 @@ At the moment, the project does not contain any automated tests or tools to docu
 In the future, suitable tools for automated testing and documentation might be added.
 
 ## Limitations
+
 barco does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
+
 - create a new network namespace
 - create a virtual ethernet pair
 - move one end of the pair to the new network namespace
@@ -137,8 +135,8 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Todo
 
-- Improve logging
+- Improve logging location and verbosity to make sure they are correct, explanatory, useful and consistent
+- Improve comments to make sure they are correct, explanatory, useful and consistent
 - Add support for cgroupsv2
-- Review documentation
-- Split security, namespaces
-- Check config struct + how fields are passed
+
+- Why execve fails? (check config struct, how fields are passed, what is passed, etc.)

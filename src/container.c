@@ -32,37 +32,41 @@ int container_set_userns(container_config *config) {
   int has_userns = !unshare(CLONE_NEWUSER);
   int result = 0;
 
-  log_debug("trying a user namespace...");
+  log_debug("setting up user namespace...");
+  log_debug("writing to container socket...");
   if (write(config->fd, &has_userns, sizeof(has_userns)) !=
       sizeof(has_userns)) {
-    log_error("could not write: %m");
+    log_error("write to socket failed: %m");
     return -1;
   }
 
+  log_debug("reading from container socket...");
   if (read(config->fd, &result, sizeof(result)) != sizeof(result)) {
-    log_error("could not read: %m");
+    log_error("read from socket failed: %m");
     return -1;
   }
+
   if (result) {
     return -1;
   }
 
   if (has_userns) {
-    log_debug("done");
+    log_debug("user namespace setup complete");
   } else {
-    log_debug("might be unsupported. continuing...");
+    log_debug("user namespaces probably unsupported, continuing...");
   }
 
   log_debug("switching to uid %d / gid %d...", config->uid, config->uid);
 
+  log_debug("setting uid and gid mappings...");
   if (setgroups(1, &(gid_t){config->uid}) ||
       setresgid(config->uid, config->uid, config->uid) ||
       setresuid(config->uid, config->uid, config->uid)) {
-    log_error("%m");
+    log_error("setting uid and gid mappings failed: %m");
     return -1;
   }
 
-  log_debug("done");
+  log_debug("user namespace setup complete");
 
   return 0;
 }
@@ -108,7 +112,7 @@ int container_set_userns(container_config *config) {
 // CAP_SYS_CHROOT: allow chroot() (has risks)
 // CAP_SYS_TTYCONFIG: allow configuring TTY devices (has risks)
 int container_set_capabilities(void) {
-  log_debug("dropping capabilities...");
+  log_debug("setting up capabilities...");
   int drop_caps[] = {
       CAP_AUDIT_CONTROL,   CAP_AUDIT_READ,   CAP_AUDIT_WRITE, CAP_BLOCK_SUSPEND,
       CAP_DAC_READ_SEARCH, CAP_FSETID,       CAP_IPC_LOCK,    CAP_MAC_ADMIN,
@@ -117,7 +121,7 @@ int container_set_capabilities(void) {
       CAP_SYS_RAWIO,       CAP_SYS_RESOURCE, CAP_SYS_TIME,    CAP_WAKE_ALARM};
 
   int num_caps = sizeof(drop_caps) / sizeof(*drop_caps);
-  log_debug("bounding...");
+  log_debug("dropping bounding capabilities...");
   for (int i = 0; i < num_caps; i++) {
     if (prctl(PR_CAPBSET_DROP, drop_caps[i], 0, 0, 0)) {
       log_error("prctl failed: %m");
@@ -125,21 +129,23 @@ int container_set_capabilities(void) {
     }
   }
 
-  log_debug("inheritable...");
+  log_debug("dropping inheritable capabilities...");
   cap_t caps = NULL;
   if (!(caps = cap_get_proc()) ||
       cap_set_flag(caps, CAP_INHERITABLE, num_caps, drop_caps, CAP_CLEAR) ||
       cap_set_proc(caps)) {
-    log_error("failed: %m");
+    log_error("cap functions failed: %m");
     if (caps) {
+      log_debug("freeing caps...");
       cap_free(caps);
     }
 
     return 1;
   }
 
+  log_debug("freeing caps...");
   cap_free(caps);
-  log_debug("done");
+  log_debug("capabilities setup complete");
 
   return 0;
 }
@@ -147,6 +153,7 @@ int container_set_capabilities(void) {
 // pivot_root is a system call to swap the mount at / with another.
 // glibc does not provide a wrapper for it.
 long pivot_root(const char *new_root, const char *put_old) {
+  log_debug("calling pivot_root syscall...");
   return syscall(SYS_pivot_root, new_root, put_old);
 }
 
@@ -160,59 +167,71 @@ long pivot_root(const char *new_root, const char *put_old) {
 // Notice: The container is not being packed/unpacked. This
 // is risky if the mounted directory contains sensitive data.
 int container_set_mounts(container_config *config) {
+  log_debug("setting up mounts...");
+
   // MS_PRIVATE makes the bind mount invisible outside of the namespace
-  log_debug("remounting everything with MS_PRIVATE...");
+  // MS_REC makes the mount recursive
+  log_debug("remounting with MS_PRIVATE...");
   if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL)) {
-    log_error("failed: %m");
+    log_error("failed to mount: %m");
     return -1;
   }
-  log_debug("remounted");
+  log_debug("remounted.");
 
-  log_debug("making a temp directory and a bind mount there...");
+  log_debug("creating temporary directory and...");
   char mount_dir[] = "/tmp/tmp.XXXXXX";
   if (!mkdtemp(mount_dir)) {
-    log_error("failed making a directory");
+    log_error("directory creation failed: %m");
     return -1;
   }
 
+  log_debug("bind mount...");
   if (mount(*config->mount_dir, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
-    log_error("bind mount failed: path=%s", config->mount_dir);
+    log_error("bind mount failed for path %s: %m", config->mount_dir);
     return -1;
   }
 
+  log_debug("creating inner directory...");
   char inner_mount_dir[] = "/tmp/tmp.XXXXXX/oldroot.XXXXXX";
   memcpy(inner_mount_dir, mount_dir, sizeof(mount_dir) - 1);
   if (!mkdtemp(inner_mount_dir)) {
-    log_error("failed creating the inner directory");
+    log_error("creating inner directory failed: %m");
     return -1;
   }
-  log_debug("done");
 
-  log_debug("pivoting root...");
+  log_debug("pivot root preparation complete");
+
+  log_debug("pivot root...");
   if (pivot_root(mount_dir, inner_mount_dir)) {
-    log_error("failed");
+    log_error("pivot root failed: %m");
     return -1;
   }
-  log_debug("done");
+  log_debug("pivot root complete");
 
+  log_debug("unmounting old root...");
   char *old_root_dir = basename(inner_mount_dir);
   char old_root[sizeof(inner_mount_dir) + 1] = {"/"};
   strlcpy(&old_root[1], old_root_dir, sizeof(old_root));
 
-  log_debug("unmounting old root...");
+  log_debug("changing directory to /...");
   if (chdir("/")) {
     log_error("chdir failed: %m");
     return -1;
   }
+
+  log_debug("unmounting...");
   if (umount2(old_root, MNT_DETACH)) {
     log_error("umount failed: %m");
     return -1;
   }
+
+  log_debug("removing temporary directories...");
   if (rmdir(old_root)) {
     log_error("rmdir failed: %m");
     return -1;
   }
-  log_debug("done");
+
+  log_debug("mounts setup complete");
   return 0;
 }
 
@@ -230,7 +249,8 @@ int container_set_mounts(container_config *config) {
 // - newer versions or aliases of other syscalls
 int container_set_syscalls(void) {
   scmp_filter_ctx ctx = NULL;
-  log_debug("filtering syscalls...");
+
+  log_debug("setting up syscalls...");
   if (!(ctx = seccomp_init(SCMP_ACT_ALLOW)) ||
       // Calls that allow creating new setuid / setgid executables.
       // The contained process could created a setuid binary that can be used
@@ -293,17 +313,20 @@ int container_set_syscalls(void) {
       // an unprivileged user.
       seccomp_attr_set(ctx, SCMP_FLTATR_CTL_NNP, 0) || seccomp_load(ctx)) {
 
+    log_error("failed to filter syscalls: %m");
+
     // Apply restrictions to the process and release the context.
+    log_debug("releasing seccomp context...");
     if (ctx) {
       seccomp_release(ctx);
     }
 
-    log_error("failed to filter syscalls: %m");
     return 1;
   }
 
+  log_debug("releasing seccomp context...");
   seccomp_release(ctx);
-  log_debug("done.");
+  log_debug("syscalls filtered.");
 
   return 0;
 }
@@ -313,22 +336,32 @@ int container_set_syscalls(void) {
 // unshare cannot be called after syscalls are limited, etc...
 int container_start(void *arg) {
   container_config *config = arg;
+
+  log_debug("starting container");
+  log_debug(
+      "setting hostname, mounts, user namespace, capabilities and syscalls...");
+
   if (sethostname(config->hostname, strlen(config->hostname)) ||
       container_set_mounts(config) || container_set_userns(config) ||
       container_set_capabilities() || container_set_syscalls()) {
+    log_debug("failed to set properties.");
     close(config->fd);
     return -1;
   }
 
+  log_debug("closing container socket...");
   if (close(config->fd)) {
-    log_error("close failed: %m");
+    log_error("socket closings failed: %m");
     return -1;
   }
 
-  if (execve(config->cmd[0], config->cmd, NULL)) {
+  log_debug("executing requested command in container...");
+  if (execve(config->cmd[0], config->mount_dir, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }
+
+  log_debug("container started...");
 
   return 0;
 }
@@ -344,6 +377,7 @@ int container_init(container_config *config, char *stack) {
               CLONE_NEWNET | CLONE_NEWUTS;
 
   // SIGCHLD lets us wait on the child process.
+  log_debug("cloning process...");
   if ((container_pid =
            clone(container_start, stack, flags | SIGCHLD, config)) == -1) {
     log_error("clone failed: %m");
@@ -352,17 +386,26 @@ int container_init(container_config *config, char *stack) {
 
   // Close and zero the child's socket, to avoid leaving an open fd in
   // case of a failure. If we do not do this, the child or parent might hang.
+  log_debug("resetting container socket...");
   close(config->fd);
   config->fd = 0;
 
   return container_pid;
 }
 
-void container_stop(int container_pid) { kill(container_pid, SIGKILL); }
+void container_stop(int container_pid) {
+  log_debug("calling kill for container_pid %d...", container_pid);
+  kill(container_pid, SIGKILL);
+  log_debug("container_pid %d killed.", container_pid);
+}
 
 int container_wait(int container_pid) {
   int container_status = 0;
+
+  log_debug("waiting for container_pid %d...", container_pid);
   waitpid(container_pid, &container_status, 0);
+  log_debug("container_pid %d exited.", container_pid);
+
   return WEXITSTATUS(container_status);
 }
 
@@ -370,18 +413,23 @@ int container_update_map(pid_t container_pid, int fd) {
   int uid_map = 0;
   int has_userns = -1;
 
+  log_debug("updating container map...");
+  log_debug("retrieving user namespaces status...");
   if (read(fd, &has_userns, sizeof(has_userns)) != sizeof(has_userns)) {
-    log_error("read failed: %m");
+    log_error("retrieve status failed: %m");
     return -1;
   }
 
   if (has_userns) {
     char path[PATH_MAX] = {0};
 
+    log_debug("user namespaces enabled.");
+
+    log_debug("writing uid_map and gid_map...");
     for (char **file = (char *[]){"uid_map", "gid_map", 0}; *file; file++) {
       if (snprintf(path, sizeof(path), "/proc/%d/%s", container_pid, *file) >
           sizeof(path)) {
-        log_error("snprintf failed: %m");
+        log_error("path setup failed: %m");
         return -1;
       }
 
@@ -390,18 +438,23 @@ int container_update_map(pid_t container_pid, int fd) {
         log_error("open failed: %m");
         return -1;
       }
+
+      log_debug("writing settings...");
       if (dprintf(uid_map, "0 %d %d\n", CONTAINER_USERNS_OFFSET,
                   CONTAINER_USERNS_COUNT) == -1) {
-        log_error("dprintf failed: %m");
+        log_error("writing to uid_map failed: %m");
         close(uid_map);
         return -1;
       }
       close(uid_map);
     }
+
+    log_debug("uid_map and gid_map updated.");
   }
 
+  log_debug("updating socket.");
   if (write(fd, &(int){0}, sizeof(int)) != sizeof(int)) {
-    log_error("write failed: %m");
+    log_error("socket update failed: %m");
     return -1;
   }
 

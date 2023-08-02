@@ -71,14 +71,6 @@ check: $(BARCO)
 	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_0)
 	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_1)
 
-# Run lldb debugger on executable
-debug: $(BARCO)
-	@$(DEBUGGER) $(BIN_DIR)/$(BARCO)
-
-# Run objdump disassembler on object files
-asm: dir $(BARCO).o
-	@$(DISASSEMBLER) -S -l -d $(BUILD_DIR)/$(BARCO).o > $(BUILD_DIR)/$(BARCO).o.asm
-
 # Setup dependencies for build and development
 setup:
 	# Update apt and upgrade packages
@@ -122,4 +114,4 @@ dir:
 clean:
 	@rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-.PHONY: lint format check debug asm setup dir clean deps
+.PHONY: lint format check setup dir clean deps

@@ -130,16 +130,23 @@ int main(int argc, char **argv) {
   // Wait for the container to exit
   log_debug("waiting for container to exit...");
   exitcode |= container_wait(container_pid);
+  log_debug("container exited...");
 
 cleanup:
   // Clear resources (cgroups, stack, sockets)
   log_debug("cleaning up...");
+  log_debug("cleaning up cgroup...");
   cgroups_free(config.hostname);
+
+  log_debug("freeing stack...");
   free(stack);
+
+  log_debug("closing sockets...");
   close(sockets[0]);
   close(sockets[1]);
 
 exit:
+  log_debug("freeing argtable...");
   arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
   return exitcode;
 }

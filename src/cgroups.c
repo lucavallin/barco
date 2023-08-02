@@ -60,27 +60,34 @@ int cgroups_init(char *hostname) {
     log_debug("setting %s...", (*cgrp)->control);
     if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
                  hostname) == -1) {
+      log_error("path setup failed: %m");
       return -1;
     }
 
+    log_debug("creating %s...", dir);
     if (mkdir(dir, S_IRUSR | S_IWUSR | S_IXUSR)) {
       log_error("mkdir %s failed: %m", dir);
       return -1;
     }
 
+    log_debug("writing settings...");
     for (struct cgrp_setting **setting = (*cgrp)->settings; *setting;
          setting++) {
       char path[PATH_MAX] = {0};
       int fd = 0;
 
+      log_debug("setting %s...", (*setting)->name);
       if (snprintf(path, sizeof(path), "%s/%s", dir, (*setting)->name) == -1) {
-        log_error("snprintf failed: %m");
         return -1;
       }
+
+      log_debug("opening %s...", path);
       if ((fd = open(path, O_WRONLY)) == -1) {
         log_error("opening %s failed: %m", path);
         return -1;
       }
+
+      log_debug("writing %s to setting", (*setting)->value);
       if (write(fd, (*setting)->value, strlen((*setting)->value)) == -1) {
         log_error("writing to %s failed: %m", path);
         close(fd);
@@ -90,7 +97,7 @@ int cgroups_init(char *hostname) {
     }
   }
 
-  log_debug("done.");
+  log_debug("cgroups complete.");
   log_debug("setting rlimit...");
 
   if (setrlimit(RLIMIT_NOFILE, &(struct rlimit){
@@ -101,7 +108,7 @@ int cgroups_init(char *hostname) {
     return 1;
   }
 
-  log_debug("done.");
+  log_debug("strlimit complete.");
   return 0;
 }
 
@@ -115,18 +122,22 @@ int cgroups_free(char *hostname) {
     char task[PATH_MAX] = {0};
     int task_fd = 0;
 
+    log_debug("cleaning %s...", (*cgrp)->control);
     if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
                  hostname) == -1 ||
         snprintf(task, sizeof(task), "/sys/fs/cgroup/%s/tasks",
                  (*cgrp)->control) == -1) {
-      log_error("snprintf failed: %m");
+      log_error("paths setup failed: %m");
       return -1;
     }
 
+    log_debug("opening %s...", task);
     if ((task_fd = open(task, O_WRONLY)) == -1) {
       log_error("opening %s failed: %m", task);
       return -1;
     }
+
+    log_debug("writing to %s...", task);
     if (write(task_fd, "0", 2) == -1) {
       log_error("writing to %s failed: %m", task);
       close(task_fd);
@@ -134,12 +145,13 @@ int cgroups_free(char *hostname) {
     }
     close(task_fd);
 
+    log_debug("removing %s...", dir);
     if (rmdir(dir)) {
       log_error("rmdir %s failed: %m", dir);
       return -1;
     }
   }
 
-  log_debug("done");
+  log_debug("cgroups freed.");
   return 0;
 }
