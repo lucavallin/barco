@@ -97,7 +97,7 @@ int cgroups_init(char *hostname) {
     }
   }
 
-  log_debug("cgroups complete.");
+  log_debug("cgroups complete");
   log_debug("setting rlimit...");
 
   if (setrlimit(RLIMIT_NOFILE, &(struct rlimit){
@@ -108,7 +108,7 @@ int cgroups_init(char *hostname) {
     return 1;
   }
 
-  log_debug("strlimit complete.");
+  log_debug("strlimit complete");
   return 0;
 }
 
@@ -152,6 +152,6 @@ int cgroups_free(char *hostname) {
     }
   }
 
-  log_debug("cgroups freed.");
+  log_debug("cgroups freed");
   return 0;
 }

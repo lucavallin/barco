@@ -326,7 +326,7 @@ int container_set_syscalls(void) {
 
   log_debug("releasing seccomp context...");
   seccomp_release(ctx);
-  log_debug("syscalls filtered.");
+  log_debug("syscalls filtered");
 
   return 0;
 }
@@ -344,7 +344,7 @@ int container_start(void *arg) {
   if (sethostname(config->hostname, strlen(config->hostname)) ||
       container_set_mounts(config) || container_set_userns(config) ||
       container_set_capabilities() || container_set_syscalls()) {
-    log_debug("failed to set properties.");
+    log_debug("failed to set properties");
     close(config->fd);
     return -1;
   }
@@ -399,7 +399,7 @@ int container_init(container_config *config, char *stack) {
 void container_stop(int container_pid) {
   log_debug("calling kill for container_pid %d...", container_pid);
   kill(container_pid, SIGKILL);
-  log_debug("container_pid %d killed.", container_pid);
+  log_debug("container_pid %d killed", container_pid);
 }
 
 int container_wait(int container_pid) {
@@ -407,7 +407,7 @@ int container_wait(int container_pid) {
 
   log_debug("waiting for container_pid %d...", container_pid);
   waitpid(container_pid, &container_status, 0);
-  log_debug("container_pid %d exited.", container_pid);
+  log_debug("container_pid %d exited", container_pid);
 
   return WEXITSTATUS(container_status);
 }
@@ -426,7 +426,7 @@ int container_update_map(pid_t container_pid, int fd) {
   if (has_userns) {
     char path[PATH_MAX] = {0};
 
-    log_debug("user namespaces enabled.");
+    log_debug("user namespaces enabled");
 
     log_debug("writing uid_map and gid_map...");
     for (char **file = (char *[]){"uid_map", "gid_map", 0}; *file; file++) {
@@ -452,10 +452,10 @@ int container_update_map(pid_t container_pid, int fd) {
       close(uid_map);
     }
 
-    log_debug("uid_map and gid_map updated.");
+    log_debug("uid_map and gid_map updated");
   }
 
-  log_debug("updating socket.");
+  log_debug("updating socket");
   if (write(fd, &(int){0}, sizeof(int)) != sizeof(int)) {
     log_error("socket update failed: %m");
     return -1;

@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
   }
 
   config.cmd = (char *)cmd->sval[0];
-  config.arg = (char *)arg->sval;
+  config.arg = (char *)arg->sval[0];
   config.mnt = (char *)mnt->sval[0];
 
   // Set hostname for the container to "barcontainer"
