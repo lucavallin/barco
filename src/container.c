@@ -179,7 +179,7 @@ int container_set_mounts(container_config *config) {
   log_debug("remounted");
 
   log_debug("creating temporary directory and...");
-  char mount_dir[] = "/tmp/tmp.barco";
+  char mount_dir[] = "/tmp/barco.XXXXXX";
   if (!mkdtemp(mount_dir)) {
     log_error("directory creation failed: %m");
     return -1;
@@ -192,7 +192,7 @@ int container_set_mounts(container_config *config) {
   }
 
   log_debug("creating inner directory...");
-  char inner_mount_dir[] = "/tmp/tmp.barco/oldroot.barco";
+  char inner_mount_dir[] = "/tmp/barco.XXXXXX/oldroot.XXXXXX";
   memcpy(inner_mount_dir, mount_dir, sizeof(mount_dir) - 1);
   if (!mkdtemp(inner_mount_dir)) {
     log_error("creating inner directory failed: %m");
