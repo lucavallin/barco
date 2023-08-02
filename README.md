@@ -16,10 +16,30 @@ help with this, but it is not available on all systems as it can be a security r
 
 ## Usage
 
-`barco` can be used to run `bin/sh` in the current directory as `root`:
+`barco` can be used to run `bin/sh` from the `/` directory as `root`:
 
 ```bash
-$ sudo ./bin/barco -m . -u 0 -c /bin/sh
+$ sudo ./bin/barco -u 0 -m / -c /usr/bin/sh
+
+23:21:12 INFO /erc/barco.c:90: initializing socket pair...
+23:21:12 INFO /sre/barco.c:97: setting socket flags...
+28:21:12 INFO /sre/barco.c:107: initializing container stack...
+28:21:12 INFO /src/barco.c:116: initializing groups...
+23:21:12 INFO /src/barco.c:126: initializing container...
+28:21:12 INFO /src/barco.c:136: updating map...
+28:21:12 INFO /src/barco.c:144: waiting for container to exit...
+23:21:12 INFO /src/container.c:360: ### BARCONTAINER STARTING - type 'exit' to quit ###
+
+# ls
+bin         home                lib32       media       root        sys         vmlinuz
+boot        initrd.img          lib64       mnt         run         tmp         vmlinuz.old
+dev         initrd.img.old      libx32      opt         sbin        usr
+etc         lib                 lost+found  proc        srv         var
+# echo "i am in a container"
+i am in a container
+# exit
+23:24:23 INFO /src/barco.c:150: cleaning up...
+28:24:23 INFO /sre/barco.c:164: so long and thanks for all the fish
 ```
 
 ## Setup
@@ -137,6 +157,6 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 - Review logging location and verbosity to make sure they are correct, explanatory, useful and consistent
 - Review comments to make sure they are correct, explanatory, useful and consistent
+- General refactoring / code splitting
+- Pass arg to container command
 - Add support for cgroupsv2
-
-- Why execve fails? (check config struct, how fields are passed, what is passed, etc.)

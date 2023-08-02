@@ -357,14 +357,13 @@ int container_start(void *arg) {
 
   log_debug("executing command '%s %s' from directory '%s; in container...",
             config->cmd, config->arg, config->mnt);
+  log_info("### BARCONTAINER STARTING - type 'exit' to quit ###");
   // Set argv to NULL to avoid passing any arguments to the command
   char *argv[] = {NULL};
   if (execve(config->cmd, argv, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }
-
-  log_info("### BARCONTAINER STARTED - type 'exit' to quit ###");
   log_debug("container started...");
 
   return 0;
