@@ -358,7 +358,8 @@ int container_start(void *arg) {
   log_debug("executing command '%s %s' from directory '%s; in container...",
             config->cmd, config->arg, config->mnt);
   // Set argv to NULL to avoid passing any arguments to the command
-  if (execve(config->cmd, &config->arg, NULL)) {
+  char *argv[] = {NULL};
+  if (execve(config->cmd, argv, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }
