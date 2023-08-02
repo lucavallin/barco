@@ -141,4 +141,4 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 - Add support for cgroupsv2
 - Review documentation
 - Split security, namespaces
-- Check config struct, how fields are passed, fd
+- Check config struct + how fields are passed

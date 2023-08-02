@@ -115,9 +115,9 @@ int cgroups_free(char *hostname) {
     char task[PATH_MAX] = {0};
     int task_fd = 0;
 
-    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroups/%s/%s", (*cgrp)->control,
+    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
                  hostname) == -1 ||
-        snprintf(task, sizeof(task), "/sys/fs/cgroups/%s/tasks",
+        snprintf(task, sizeof(task), "/sys/fs/cgroup/%s/tasks",
                  (*cgrp)->control) == -1) {
       log_error("snprintf failed: %m");
       return -1;
