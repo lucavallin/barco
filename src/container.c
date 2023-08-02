@@ -366,11 +366,11 @@ int container_wait(int container_pid) {
   return WEXITSTATUS(container_status);
 }
 
-int container_update_map(pid_t container_pid, int *fd) {
+int container_update_map(pid_t container_pid, int fd) {
   int uid_map = 0;
   int has_userns = -1;
 
-  if (read(*fd, &has_userns, sizeof(has_userns)) != sizeof(has_userns)) {
+  if (read(fd, &has_userns, sizeof(has_userns)) != sizeof(has_userns)) {
     log_error("read failed: %m");
     return -1;
   }
@@ -400,7 +400,7 @@ int container_update_map(pid_t container_pid, int *fd) {
     }
   }
 
-  if (write(*fd, &(int){0}, sizeof(int)) != sizeof(int)) {
+  if (write(fd, &(int){0}, sizeof(int)) != sizeof(int)) {
     log_error("write failed: %m");
     return -1;
   }

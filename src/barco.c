@@ -120,9 +120,8 @@ int main(int argc, char **argv) {
 
   // Configures the container's user namespace and
   // pause until its process tree exits
-  // container_update_map(container_pid, sockets[0]);
   log_debug("updating map...");
-  if (container_update_map(container_pid, &(config.fd))) {
+  if (container_update_map(container_pid, sockets[0])) {
     exitcode = 1;
     log_error("container_update_map failed, stopping container...");
     container_stop(container_pid);

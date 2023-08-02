@@ -16,7 +16,7 @@ enum {
 };
 
 // Represents the configuration for a container.
-typedef struct container_config {
+typedef struct {
   uid_t uid;
   int fd;
   char *hostname;
@@ -28,7 +28,7 @@ typedef struct container_config {
 int container_init(container_config *config, char *stack);
 
 // Configures the container's user namespace
-int container_update_map(pid_t container_pid, int *fd);
+int container_update_map(pid_t container_pid, int fd);
 
 // Stops the container.
 void container_stop(int container_pid);
