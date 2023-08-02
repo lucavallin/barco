@@ -37,13 +37,14 @@ int main(int argc, char **argv) {
       help = arg_litn(NULL, "help", 0, 1, "display this help and exit"),
       version =
           arg_litn(NULL, "version", 0, 1, "display version info and exit"),
-      uid = arg_intn("u", "uid", "<n>", 1, 1, "set the uid of the container"),
+      uid = arg_intn("u", "uid", "<n>", 1, 1,
+                     "uid and gid of the user in the container"),
       mnt = arg_strn("m", "mnt", "<s>", 1, 1,
-                     "set the directory to mount as root in the container"),
-      cmd = arg_strn("c", "cmd", "<s>", 1, 1,
-                     "set the command to run in the container"),
-      arg = arg_strn("a", "arg", "<s>", 0, 1,
-                     "set the argument to pass to the command"),
+                     "directory to mount as root in the container"),
+      cmd =
+          arg_strn("c", "cmd", "<s>", 1, 1, "command to run in the container"),
+      arg =
+          arg_strn("a", "arg", "<s>", 0, 1, "argument to pass to the command"),
       vrb = arg_litn("v", "verbosity", 0, 1, "verbose output"),
       end = arg_end(ARGTABLE_ARG_MAX),
   };

@@ -179,7 +179,7 @@ int container_set_mounts(container_config *config) {
   log_debug("remounted");
 
   log_debug("creating temporary directory and...");
-  char mount_dir[] = "/tmp/barco";
+  char mount_dir[] = "/tmp/tmp.barco";
   if (!mkdtemp(mount_dir)) {
     log_error("directory creation failed: %m");
     return -1;
@@ -192,7 +192,7 @@ int container_set_mounts(container_config *config) {
   }
 
   log_debug("creating inner directory...");
-  char inner_mount_dir[] = "/tmp/barco/oldroot";
+  char inner_mount_dir[] = "/tmp/tmp.barco/oldroot.barco";
   memcpy(inner_mount_dir, mount_dir, sizeof(mount_dir) - 1);
   if (!mkdtemp(inner_mount_dir)) {
     log_error("creating inner directory failed: %m");
@@ -355,13 +355,15 @@ int container_start(void *arg) {
     return -1;
   }
 
-  log_debug("executing requested command in container...");
+  log_debug("executing command '%s %s' from directory '%s; in container...",
+            config->cmd, config->arg, config->mnt);
   // Set argv to NULL to avoid passing any arguments to the command
   if (execve(config->cmd, &config->arg, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }
 
+  log_info("### BARCONTAINER STARTED - type 'exit' to quit ###");
   log_debug("container started...");
 
   return 0;
