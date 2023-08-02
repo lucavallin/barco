@@ -20,7 +20,7 @@ typedef struct {
   uid_t uid;
   int fd;
   char *hostname;
-  const char **cmd;
+  char *cmd;
   const char *mount_dir;
 } container_config;
 

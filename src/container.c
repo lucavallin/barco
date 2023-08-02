@@ -356,7 +356,9 @@ int container_start(void *arg) {
   }
 
   log_debug("executing requested command in container...");
-  if (execve(config->cmd[0], (char *const *)config->cmd, NULL)) {
+  // Null terminated string
+  char *argv[] = {config->cmd, NULL};
+  if (execve(config->cmd, argv, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }

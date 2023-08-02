@@ -75,8 +75,8 @@ int main(int argc, char **argv) {
     log_set_level(LOG_TRACE);
   }
 
-  config.cmd = cmd->sval;
-  config.mount_dir = *mnt->sval;
+  config.cmd = cmd->sval[0];
+  config.mount_dir = mnt->sval[0];
 
   // Set hostname for the container to "barcontainer"
   config.hostname = "barcontainer";
