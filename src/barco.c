@@ -16,8 +16,9 @@ enum {
 /* global arg_xxx structs */
 struct arg_lit *help, *version;
 struct arg_int *uid;
-struct arg_str *img;
+struct arg_str *mnt;
 struct arg_str *cmd;
+struct arg_lit *vrb;
 struct arg_end *end;
 
 int main(int argc, char **argv) {
@@ -36,10 +37,11 @@ int main(int argc, char **argv) {
       version =
           arg_litn(NULL, "version", 0, 1, "display version info and exit"),
       uid = arg_intn("u", "uid", "<n>", 1, 1, "set the uid of the container"),
+      mnt = arg_strn("m", "mnt", "<s>", 1, 1,
+                     "set the mount path to use for the container"),
       cmd = arg_strn("c", "cmd", "<s>", 1, 1,
                      "set the command to run in the container"),
-      img = arg_strn("m", "img", "<s>", 1, 1,
-                     "set the mount path to use for the container"),
+      vrb = arg_litn("v", "verbosity", 0, 1, "verbose output"),
       end = arg_end(ARGTABLE_ARG_MAX),
   };
 
@@ -67,23 +69,29 @@ int main(int argc, char **argv) {
     goto exit;
   }
 
+  // Set verbosity level
+  log_set_level(LOG_INFO);
+  if (vrb->count > 0) {
+    log_set_level(LOG_TRACE);
+  }
+
   config.cmd = cmd->sval;
-  config.mount_dir = img->sval;
+  config.mount_dir = *mnt->sval;
 
   // Set hostname for the container to "barcontainer"
   config.hostname = "barcontainer";
 
   // Initialize a socket pair to communicate with the container
-  log_debug("initializing socket pair...");
+  log_info("initializing socket pair...");
   if (socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
-    log_error("socket pair initilization failed: %m");
+    log_fatal("socket pair initilization failed: %m");
     exitcode = 1;
     goto exit;
   }
 
-  log_debug("setting socket flags...");
+  log_info("setting socket flags...");
   if (fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
-    log_error("socket fcntl failed: %m");
+    log_fatal("socket fcntl failed: %m");
     exitcode = 1;
     goto exit;
   }
@@ -91,18 +99,18 @@ int main(int argc, char **argv) {
 
   // Initialize a stack for the container
   // Allocate memory for the container stack
-  log_debug("initializing container stack...");
+  log_info("initializing container stack...");
   if (!(stack = malloc(CONTAINER_STACK_SIZE))) {
-    log_error("container stack initilization failed");
+    log_fatal("container stack initilization failed");
     exitcode = 1;
     goto cleanup;
   }
 
   // Prepare cgroups for the process tree (the container is a child of the
   // barco process)
-  log_debug("initializing cgroups...");
+  log_info("initializing cgroups...");
   if (cgroups_init(config.hostname)) {
-    log_error("cgroups initilization failed");
+    log_fatal("cgroups initilization failed");
     exitcode = 1;
     goto cleanup;
   }
@@ -110,31 +118,31 @@ int main(int argc, char **argv) {
   // Initialize the container (calls clone() internally)
   // Stacks on most architectures grow downwards.
   // CONTAINER_STACK_SIZE gives us a pointer just below the end.
-  log_debug("initializing container...");
+  log_info("initializing container...");
   if ((container_pid = container_init(&config, stack + CONTAINER_STACK_SIZE)) ==
       -1) {
-    log_error("container_init failed");
+    log_fatal("container_init failed");
     exitcode = 1;
     goto cleanup;
   }
 
   // Configures the container's user namespace and
   // pause until its process tree exits
-  log_debug("updating map...");
+  log_info("updating map...");
   if (container_update_map(container_pid, sockets[0])) {
     exitcode = 1;
-    log_error("container_update_map failed, stopping container...");
+    log_fatal("container_update_map failed, stopping container...");
     container_stop(container_pid);
   }
 
   // Wait for the container to exit
-  log_debug("waiting for container to exit...");
+  log_info("waiting for container to exit...");
   exitcode |= container_wait(container_pid);
   log_debug("container exited...");
 
 cleanup:
   // Clear resources (cgroups, stack, sockets)
-  log_debug("cleaning up...");
+  log_info("cleaning up...");
   log_debug("cleaning up cgroup...");
   cgroups_free(config.hostname);
 
@@ -148,5 +156,6 @@ cleanup:
 exit:
   log_debug("freeing argtable...");
   arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
+  log_info("so long and thanks for all the fish");
   return exitcode;
 }

@@ -21,7 +21,7 @@ typedef struct {
   int fd;
   char *hostname;
   const char **cmd;
-  const char **mount_dir;
+  const char *mount_dir;
 } container_config;
 
 // Initializes the container.

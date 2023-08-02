@@ -135,8 +135,8 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Todo
 
-- Improve logging location and verbosity to make sure they are correct, explanatory, useful and consistent
-- Improve comments to make sure they are correct, explanatory, useful and consistent
+- Review logging location and verbosity to make sure they are correct, explanatory, useful and consistent
+- Review comments to make sure they are correct, explanatory, useful and consistent
 - Add support for cgroupsv2
 
 - Why execve fails? (check config struct, how fields are passed, what is passed, etc.)

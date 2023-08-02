@@ -176,7 +176,7 @@ int container_set_mounts(container_config *config) {
     log_error("failed to mount: %m");
     return -1;
   }
-  log_debug("remounted.");
+  log_debug("remounted");
 
   log_debug("creating temporary directory and...");
   char mount_dir[] = "/tmp/tmp.XXXXXX";
@@ -186,7 +186,7 @@ int container_set_mounts(container_config *config) {
   }
 
   log_debug("bind mount...");
-  if (mount(*config->mount_dir, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
+  if (mount(config->mount_dir, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
     log_error("bind mount failed for path %s: %m", config->mount_dir);
     return -1;
   }
@@ -356,7 +356,7 @@ int container_start(void *arg) {
   }
 
   log_debug("executing requested command in container...");
-  if (execve(config->cmd[0], config->mount_dir, NULL)) {
+  if (execve(config->cmd[0], (char *const *)config->cmd, NULL)) {
     log_error("execve failed: %m");
     return -1;
   }
@@ -428,7 +428,7 @@ int container_update_map(pid_t container_pid, int fd) {
     log_debug("writing uid_map and gid_map...");
     for (char **file = (char *[]){"uid_map", "gid_map", 0}; *file; file++) {
       if (snprintf(path, sizeof(path), "/proc/%d/%s", container_pid, *file) >
-          sizeof(path)) {
+          (int)sizeof(path)) {
         log_error("path setup failed: %m");
         return -1;
       }
