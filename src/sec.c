@@ -1,5 +1,5 @@
-#include "security.h"
-#include "../lib/log/log.h"
+#include "sec.h"
+#include "log.h"
 #include <asm-generic/ioctls.h>
 #include <linux/capability.h>
 #include <linux/prctl.h>
@@ -10,9 +10,8 @@
 #include <sys/prctl.h>
 #include <sys/stat.h>
 
-// Capabilities are used to define the privileges of a process.
-// In some edge cases, capabilities might not be respected.
-// The container's own inheritable set and bounding set of capabilities
+// Capabilities are used to finely define the privileges of a process.
+// The process' own inheritable set and bounding set of capabilities
 // should be dropped before setting them to the desired values.
 //
 // The following capabilities are dropped:
@@ -50,8 +49,11 @@
 // CAP_SETPCAP: allow setting arbitrary, already-assigned capabilities
 // CAP_SYS_CHROOT: allow chroot() (has risks)
 // CAP_SYS_TTYCONFIG: allow configuring TTY devices (has risks)
-int security_set_caps(void) {
-  log_debug("setting up capabilities...");
+//
+// Notice: in some edge cases, some capabilities might not be respected because
+// they are not namespaced (e.g. when writing to parts of procfs)
+int sec_set_caps(void) {
+  log_debug("setting capabilities...");
   int drop_caps[] = {
       CAP_AUDIT_CONTROL,   CAP_AUDIT_READ,   CAP_AUDIT_WRITE, CAP_BLOCK_SUSPEND,
       CAP_DAC_READ_SEARCH, CAP_FSETID,       CAP_IPC_LOCK,    CAP_MAC_ADMIN,
@@ -63,7 +65,7 @@ int security_set_caps(void) {
   log_debug("dropping bounding capabilities...");
   for (int i = 0; i < num_caps; i++) {
     if (prctl(PR_CAPBSET_DROP, drop_caps[i], 0, 0, 0)) {
-      log_error("prctl failed: %m");
+      log_error("failed to prctl cap %d: %m", drop_caps[i]);
       return 1;
     }
   }
@@ -73,7 +75,7 @@ int security_set_caps(void) {
   if (!(caps = cap_get_proc()) ||
       cap_set_flag(caps, CAP_INHERITABLE, num_caps, drop_caps, CAP_CLEAR) ||
       cap_set_proc(caps)) {
-    log_error("cap functions failed: %m");
+    log_error("failed to run cap functions: %m");
     if (caps) {
       log_debug("freeing caps...");
       cap_free(caps);
@@ -84,7 +86,7 @@ int security_set_caps(void) {
 
   log_debug("freeing caps...");
   cap_free(caps);
-  log_debug("capabilities setup complete");
+  log_debug("capabilities set");
 
   return 0;
 }
@@ -101,72 +103,75 @@ int security_set_caps(void) {
 // - already prevented by the capabilities set
 // - available only on particular architectures
 // - newer versions or aliases of other syscalls
-int security_set_seccomp(void) {
+//
+// New Linux syscalls are added to the kernel over time, so this list
+// should be updated periodically.
+int sec_set_seccomp(void) {
   scmp_filter_ctx ctx = NULL;
 
-  log_debug("setting up syscalls...");
+  log_debug("setting syscalls...");
   if (!(ctx = seccomp_init(SCMP_ACT_ALLOW)) ||
       // Calls that allow creating new setuid / setgid executables.
       // The contained process could created a setuid binary that can be used
       // by an user to get root in absence of user namespaces.
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(chmod), 1,
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(chmod), 1,
                        SCMP_A1(SCMP_CMP_MASKED_EQ, S_ISUID, S_ISUID)) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(chmod), 1,
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(chmod), 1,
                        SCMP_A1(SCMP_CMP_MASKED_EQ, S_ISGID, S_ISGID)) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(fchmod), 1,
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(fchmod), 1,
                        SCMP_A1(SCMP_CMP_MASKED_EQ, S_ISUID, S_ISUID)) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(fchmod), 1,
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(fchmod), 1,
                        SCMP_A1(SCMP_CMP_MASKED_EQ, S_ISGID, S_ISGID)) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(fchmodat), 1,
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(fchmodat), 1,
                        SCMP_A2(SCMP_CMP_MASKED_EQ, S_ISUID, S_ISUID)) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(fchmodat), 1,
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(fchmodat), 1,
                        SCMP_A2(SCMP_CMP_MASKED_EQ, S_ISGID, S_ISGID)) ||
 
       // Calls that allow contained processes to start new user namespaces
       // and possibly allow processes to gain new capabilities.
       seccomp_rule_add(
-          ctx, SECURITY_SCMP_FAIL, SCMP_SYS(unshare), 1,
+          ctx, SEC_SCMP_FAIL, SCMP_SYS(unshare), 1,
           SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_NEWUSER, CLONE_NEWUSER)) ||
       seccomp_rule_add(
-          ctx, SECURITY_SCMP_FAIL, SCMP_SYS(clone), 1,
+          ctx, SEC_SCMP_FAIL, SCMP_SYS(clone), 1,
           SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_NEWUSER, CLONE_NEWUSER)) ||
 
       // Allows contained processes to write to the controlling terminal
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(ioctl), 1,
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(ioctl), 1,
                        SCMP_A1(SCMP_CMP_MASKED_EQ, TIOCSTI, TIOCSTI)) ||
 
       // The kernel keyring system is not namespaced
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(keyctl), 0) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(add_key), 0) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(request_key), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(keyctl), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(add_key), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(request_key), 0) ||
 
       // Before Linux 4.8, ptrace breaks seccomp
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(ptrace), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(ptrace), 0) ||
 
       // Calls that let processes assign NUMA nodes. These could be used to deny
       // service to other NUMA-aware application on the host.
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(mbind), 0) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(migrate_pages), 0) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(move_pages), 0) ||
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(set_mempolicy), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(mbind), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(migrate_pages), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(move_pages), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(set_mempolicy), 0) ||
 
       // Alows userspace to handle page faults It can be used to pause execution
       // in the kernel by triggering page faults in system calls, a mechanism
       // often used in kernel exploits.
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(userfaultfd), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(userfaultfd), 0) ||
 
       // This call could leak a lot of information on the host.
       // It can theoretically be used to discover kernel addresses and
       // uninitialized memory.
-      seccomp_rule_add(ctx, SECURITY_SCMP_FAIL, SCMP_SYS(perf_event_open), 0) ||
+      seccomp_rule_add(ctx, SEC_SCMP_FAIL, SCMP_SYS(perf_event_open), 0) ||
 
       // Prevents setuid and setcap'd binaries from being executed
       // with additional privileges. This has some security benefits, but due to
-      // weird side-effects, the ping command will not work in a container for
+      // weird side-effects, the ping command will not work in a process for
       // an unprivileged user.
       seccomp_attr_set(ctx, SCMP_FLTATR_CTL_NNP, 0) || seccomp_load(ctx)) {
 
-    log_error("failed to filter syscalls: %m");
+    log_error("failed to set syscalls: %m");
 
     // Apply restrictions to the process and release the context.
     log_debug("releasing seccomp context...");
@@ -179,7 +184,7 @@ int security_set_seccomp(void) {
 
   log_debug("releasing seccomp context...");
   seccomp_release(ctx);
-  log_debug("syscalls filtered");
+  log_debug("syscalls set");
 
   return 0;
 }

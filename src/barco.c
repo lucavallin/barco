@@ -1,8 +1,8 @@
-#include "../lib/argtable/argtable3.h"
-#include "../lib/log/log.h"
+#include "argtable3.h"
 #include "cgroups.h"
 #include "container.h"
-#include "userns.h"
+#include "log.h"
+#include "user.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,54 +90,51 @@ int main(int argc, char **argv) {
   // Initialize a socket pair to communicate with the container
   log_info("initializing socket pair...");
   if (socketpair(AF_LOCAL, SOCK_SEQPACKET, 0, sockets)) {
-    log_fatal("socket pair initilization failed: %m");
+    log_fatal("failed to initialialize socket pair: %m");
     exitcode = 1;
     goto exit;
   }
 
   log_info("setting socket flags...");
   if (fcntl(sockets[0], F_SETFD, FD_CLOEXEC)) {
-    log_fatal("socket fcntl failed: %m");
+    log_fatal("failed to socket fcntl: %m");
     exitcode = 1;
     goto exit;
   }
   config.fd = sockets[1];
 
   // Initialize a stack for the container
-  // Allocate memory for the container stack
   log_info("initializing container stack...");
   if (!(stack = malloc(CONTAINER_STACK_SIZE))) {
-    log_fatal("container stack initilization failed");
+    log_fatal("failed to initialize container stack: %m");
     exitcode = 1;
     goto cleanup;
   }
 
-  // Prepare cgroups for the process tree (the container is a child of the
-  // barco process)
+  // Prepare cgroups for the process (the container is a child process of barco)
   log_info("initializing cgroups...");
   if (cgroups_init(config.hostname)) {
-    log_fatal("cgroups initilization failed");
+    log_fatal("failed to initialize cgroups");
     exitcode = 1;
     goto cleanup;
   }
 
-  // Initialize the container (calls clone() internally)
+  // Initialize the container (calls clone() internally).
+  log_info("initializing container...");
   // Stacks on most architectures grow downwards.
   // CONTAINER_STACK_SIZE gives us a pointer just below the end.
-  log_info("initializing container...");
   if ((container_pid = container_init(&config, stack + CONTAINER_STACK_SIZE)) ==
       -1) {
-    log_fatal("container_init failed");
+    log_fatal("failed to container_init");
     exitcode = 1;
     goto cleanup;
   }
 
-  // Configures the container's user namespace and
-  // pause until its process tree exits
-  log_info("updating map...");
-  if (userns_set_user(container_pid, sockets[0])) {
+  // Barco configures the user namespace for the container
+  log_info("configuring user namespace...");
+  if (user_namespace_set_user(container_pid, sockets[0])) {
     exitcode = 1;
-    log_fatal("container_update_map failed, stopping container...");
+    log_fatal("failed to user_namespace_set_user, stopping container...");
     container_stop(container_pid);
   }
 
@@ -148,14 +145,14 @@ int main(int argc, char **argv) {
 
 cleanup:
   // Clear resources (cgroups, stack, sockets)
-  log_info("cleaning up...");
-  log_debug("cleaning up cgroup...");
+  log_info("freeing resources...");
+  log_debug("freeing cgroup...");
   cgroups_free(config.hostname);
 
   log_debug("freeing stack...");
   free(stack);
 
-  log_debug("closing sockets...");
+  log_debug("freeing sockets...");
   close(sockets[0]);
   close(sockets[1]);
 

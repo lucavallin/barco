@@ -2,6 +2,7 @@
 debug ?= 0
 SRC_DIR := ./src
 BUILD_DIR := ./build
+INCLUDE_DIR := ./include
 LIB_DIR := ./lib
 TESTS_DIR := ./tests
 BIN_DIR := ./bin
@@ -9,22 +10,26 @@ BIN_DIR := ./bin
 # Executable settings
 BARCO := barco
 BARCO_ARGS_0 := --help
-BARCO_ARGS_1 := -u 0 -m . -c /bin/sh
+BARCO_ARGS_1 := -u 0 -m / -c "/usr/bin/sh && exit" -a .
+BARCO_ARGS_2 := -u 0 -m / -c "/usr/bin/sh && exit" -a . -v
 
 # Libraries settings
 LIB_ARGTABLE_REPO := https://github.com/argtable/argtable3/releases/download/v3.2.2.f25c624/argtable-v3.2.2.f25c624-amalgamation.tar.gz
 LIB_ARGTABLE_NAME := argtable3
-LIB_ARGTABLE_PATH := $(LIB_DIR)/argtable/argtable3.c
+LIB_ARGTABLE_DIR := $(LIB_DIR)/argtable
+LIB_ARGTABLE_SRC := $(LIB_ARGTABLE_DIR)/argtable3.c
 LIB_LOG_REPO := https://github.com/rxi/log.c/archive/refs/heads/master.zip
 LIB_LOG_NAME := log
-LIB_LOG_PATH := $(LIB_DIR)/log/log.c
+LIB_LOG_DIR := $(LIB_DIR)/log
+LIB_LOG_SRC := $(LIB_LOG_DIR)/log.c
 LIB_LOG_FLAGS := -DLOG_USE_COLOR
 
 # Barco object files
-OBJS := $(BARCO).o cgroups.o container.o mount.o security.o userns.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
+OBJS := $(BARCO).o cgroups.o container.o mount.o sec.o user.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
 
 # Compiler settings
-CC := clang-18 --config ./clang.cfg
+CC_INCLUDE_FLAGS := -I$(INCLUDE_DIR) -I$(LIB_ARGTABLE_DIR) -I$(LIB_LOG_DIR)
+CC := clang-18 --config ./clang.cfg $(CC_INCLUDE_FLAGS)
 LINTER := clang-tidy-18
 FORMATTER := clang-format-18
 DEBUGGER := lldb-18
@@ -47,10 +52,10 @@ $(BARCO): format lint dir $(OBJS)
 %.o: dir $(SRC_DIR)/%.c
 	@$(CC) -o $(BUILD_DIR)/$*.o -c $(SRC_DIR)/$*.c
 # Build third-party libraries
-$(LIB_ARGTABLE_NAME).o: dir $(LIB_ARGTABLE_PATH)
-	@$(CC) -o $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o -c $(LIB_ARGTABLE_PATH)
-$(LIB_LOG_NAME).o: dir $(LIB_LOG_PATH)
-	@$(CC) -o $(BUILD_DIR)/$(LIB_LOG_NAME).o -c $(LIB_LOG_PATH) $(LIB_LOG_FLAGS)
+$(LIB_ARGTABLE_NAME).o: dir $(LIB_ARGTABLE_SRC)
+	@$(CC) -o $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o -c $(LIB_ARGTABLE_SRC)
+$(LIB_LOG_NAME).o: dir $(LIB_ARGTABLE_SRC)
+	@$(CC) -o $(BUILD_DIR)/$(LIB_LOG_NAME).o -c $(LIB_LOG_SRC) $(LIB_LOG_FLAGS)
 
 # Run CUnit tests
 test: dir
@@ -59,16 +64,17 @@ test: dir
 
 # Run linter on source directories
 lint:
-	@$(LINTER) --config-file=./.clang-tidy $(SRC_DIR)/* $(TESTS_DIR)/* --
+	@$(LINTER) --config-file=.clang-tidy $(SRC_DIR)/* $(INCLUDE_DIR)/* $(TESTS_DIR)/* --
 
 # Run formatter on source directories
 format:
-	@$(FORMATTER) -style=file -i $(SRC_DIR)/*  $(TESTS_DIR)/*
+	@$(FORMATTER) -style=file -i $(SRC_DIR)/* $(INCLUDE_DIR)/* $(TESTS_DIR)/*
 
 # Run valgrind memory checker on executable
 check: $(BARCO)
 	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_0)
 	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_1)
+	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_2)
 
 # Setup dependencies for build and development
 setup:

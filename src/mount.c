@@ -1,6 +1,5 @@
 #include "mount.h"
-#include "../lib/log/log.h"
-#include "container.h"
+#include "log.h"
 #include <bsd/string.h>
 #include <libgen.h>
 #include <stdlib.h>
@@ -16,23 +15,20 @@ long pivot_root(const char *new_root, const char *put_old) {
   return syscall(SYS_pivot_root, new_root, put_old);
 }
 
-// Restricts access to resources the container has in its own mount namespace:
+// Restricts access to resources the process has in its own mount namespace:
 // - Create a temporary directory and one inside of it
 // - Bind mount of the user argument onto the temporary directory
 // - pivot_root makes the bind mount the new root and mounts the old root onto
 // the inner temporary directory
 // - umount the old root and remove the inner temporary directory.
-//
-// Notice: The container is not being packed/unpacked. This
-// is risky if the mounted directory contains sensitive data.
-int mount_set(container_config *config) {
-  log_debug("setting up mounts...");
+int mount_set(char *mnt) {
+  log_debug("setting mount...");
 
   // MS_PRIVATE makes the bind mount invisible outside of the namespace
   // MS_REC makes the mount recursive
   log_debug("remounting with MS_PRIVATE...");
   if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL)) {
-    log_error("failed to mount: %m");
+    log_error("failed to mount /: %m");
     return -1;
   }
   log_debug("remounted");
@@ -40,13 +36,13 @@ int mount_set(container_config *config) {
   log_debug("creating temporary directory and...");
   char mount_dir[] = "/tmp/barco.XXXXXX";
   if (!mkdtemp(mount_dir)) {
-    log_error("directory creation failed: %m");
+    log_error("failed to create directory %s: %m", mount_dir);
     return -1;
   }
 
   log_debug("bind mount...");
-  if (mount(config->mnt, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
-    log_error("bind mount failed for path %s: %m", config->mnt);
+  if (mount(mnt, mount_dir, NULL, MS_BIND | MS_PRIVATE, NULL)) {
+    log_error("failed to bind mount on %s: %m", mnt);
     return -1;
   }
 
@@ -54,18 +50,19 @@ int mount_set(container_config *config) {
   char inner_mount_dir[] = "/tmp/barco.XXXXXX/oldroot.XXXXXX";
   memcpy(inner_mount_dir, mount_dir, sizeof(mount_dir) - 1);
   if (!mkdtemp(inner_mount_dir)) {
-    log_error("creating inner directory failed: %m");
+    log_error("failed to create inner directory %s: %m", inner_mount_dir);
     return -1;
   }
 
-  log_debug("pivot root preparation complete");
+  log_debug("pivot root preparation done");
 
-  log_debug("pivot root...");
+  log_debug("pivot root with %s, %s...", mount_dir, inner_mount_dir);
   if (pivot_root(mount_dir, inner_mount_dir)) {
-    log_error("pivot root failed: %m");
+    log_error("failed to pivot root with %s, %s: %m", mount_dir,
+              inner_mount_dir);
     return -1;
   }
-  log_debug("pivot root complete");
+  log_debug("pivot root done");
 
   log_debug("unmounting old root...");
   char *old_root_dir = basename(inner_mount_dir);
@@ -74,22 +71,22 @@ int mount_set(container_config *config) {
 
   log_debug("changing directory to /...");
   if (chdir("/")) {
-    log_error("chdir failed: %m");
+    log_error("failed to chdir to /: %m");
     return -1;
   }
 
   log_debug("unmounting...");
   if (umount2(old_root, MNT_DETACH)) {
-    log_error("umount failed: %m");
+    log_error("failed to umount %s: %m", old_root);
     return -1;
   }
 
   log_debug("removing temporary directories...");
   if (rmdir(old_root)) {
-    log_error("rmdir failed: %m");
+    log_error("failed to rmdir %s: %m", old_root);
     return -1;
   }
 
-  log_debug("mounts setup complete");
+  log_debug("mount set");
   return 0;
 }

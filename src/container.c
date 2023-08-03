@@ -1,9 +1,9 @@
 #define _GNU_SOURCE 1
 #include "container.h"
-#include "../lib/log/log.h"
+#include "log.h"
 #include "mount.h"
-#include "security.h"
-#include "userns.h"
+#include "sec.h"
+#include "user.h"
 #include <sched.h>
 #include <signal.h>
 #include <stdio.h>
@@ -13,6 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 
+// This is the function that will be called by clone() to start the container.
 // The order of the operations is of important as, for example,
 // mounts cannot be changed without specific capabilities,
 // unshare cannot be called after syscalls are limited, etc...
@@ -24,8 +25,8 @@ int container_start(void *arg) {
       "setting hostname, mounts, user namespace, capabilities and syscalls...");
 
   if (sethostname(config->hostname, strlen(config->hostname)) ||
-      mount_set(config) || userns_set(config) || security_set_caps() ||
-      security_set_seccomp()) {
+      mount_set(config->mnt) || user_namespace_init(config->uid, config->fd) ||
+      sec_set_caps() || sec_set_seccomp()) {
     log_debug("failed to set properties");
     close(config->fd);
     return -1;
@@ -33,7 +34,7 @@ int container_start(void *arg) {
 
   log_debug("closing container socket...");
   if (close(config->fd)) {
-    log_error("socket closings failed: %m");
+    log_error("failed to close container socket: %m");
     return -1;
   }
 
@@ -43,7 +44,7 @@ int container_start(void *arg) {
   // argv must be NULL terminated
   char *argv[] = {config->arg, NULL};
   if (execve(config->cmd, argv, NULL)) {
-    log_error("execve failed: %m");
+    log_error("failed to execve '%s %s': %m", config->cmd, argv);
     return -1;
   }
   log_debug("container started...");
@@ -56,8 +57,9 @@ int container_start(void *arg) {
 // All these requirements are specified by the flags we pass to clone()
 int container_init(container_config *config, char *stack) {
   int container_pid = 0;
-  // The flags namespace the mounts, pids, IPC data structures, network devices
-  // and hostname.
+  // The flags specify what the cloned process can do.
+  // These allow some control overrmounts, pids, IPC data structures, network
+  // devices and hostname.
   int flags = CLONE_NEWNS | CLONE_NEWCGROUP | CLONE_NEWPID | CLONE_NEWIPC |
               CLONE_NEWNET | CLONE_NEWUTS;
 
@@ -65,7 +67,7 @@ int container_init(container_config *config, char *stack) {
   log_debug("cloning process...");
   if ((container_pid =
            clone(container_start, stack, flags | SIGCHLD, config)) == -1) {
-    log_error("clone failed: %m");
+    log_error("failed to clone: %m");
     return 1;
   }
 

@@ -96,6 +96,12 @@ The included `Makefile` provides a few targets useful for development:
 # Run tests
 $ make test
 
+# Run linter
+$ make lint
+
+# Run formatter
+$ make format
+
 # Run valgrind
 $ make check
 
@@ -151,15 +157,6 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Improvements
 
+- Add support for `cgroupsv2`. `cgroupsv2` is the new version of `cgroups` and is not yet supported by `barco`.
 - CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.
-
-## Todo
-
-- Review logging location and verbosity to make sure they are correct, explanatory, useful and consistent
-- Review comments to make sure they are correct, explanatory, useful and consistent
-- General refactoring, check structure for headers
-- Remove dependency between files
-- Make functions more generic
-- Put large comments in .c files
-- Add support for cgroupsv2
-- Release on tag
+- The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic.
