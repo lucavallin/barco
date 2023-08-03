@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
 struct cgrp_control {
   char control[CGROUPS_CONTROL_FIELD_SIZE];
   struct cgrp_setting {
@@ -51,8 +52,8 @@ int cgroups_init(char *hostname) {
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {
     char dir[PATH_MAX] = {0};
     log_debug("setting %s...", (*cgrp)->control);
-    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
-                 hostname) == -1) {
+    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", hostname,
+                 (*cgrp)->control) == -1) {
       log_error("failed to setup path: %m");
       return -1;
     }
