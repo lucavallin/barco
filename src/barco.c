@@ -1,7 +1,8 @@
-#include "../include/cgroups.h"
-#include "../include/container.h"
 #include "../lib/argtable/argtable3.h"
 #include "../lib/log/log.h"
+#include "cgroups.h"
+#include "container.h"
+#include "userns.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -134,7 +135,7 @@ int main(int argc, char **argv) {
   // Configures the container's user namespace and
   // pause until its process tree exits
   log_info("updating map...");
-  if (container_update_map(container_pid, sockets[0])) {
+  if (userns_set_user(container_pid, sockets[0])) {
     exitcode = 1;
     log_fatal("container_update_map failed, stopping container...");
     container_stop(container_pid);

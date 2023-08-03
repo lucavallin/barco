@@ -3,6 +3,8 @@ name: C Workflow
 on:
   push:
     branches: ["main"]
+    tags:
+      - '*'
   pull_request:
     branches: ["main"]
 
@@ -20,3 +22,12 @@ jobs:
         run: make test
       - name: Compile
         run: make
+      - name: Release
+        if: 'contains(github.ref, "tags")'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: bin/${{ github.event.repository.name }}
+          asset_name: ${{ github.event.repository.name }}-linux-amd64
+          tag: ${{ github.ref }}
+

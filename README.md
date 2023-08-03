@@ -157,6 +157,9 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 - Review logging location and verbosity to make sure they are correct, explanatory, useful and consistent
 - Review comments to make sure they are correct, explanatory, useful and consistent
-- General refactoring / code splitting
-- Pass arg to container command
+- General refactoring, check structure for headers
+- Remove dependency between files
+- Make functions more generic
+- Put large comments in .c files
 - Add support for cgroupsv2
+- Release on tag

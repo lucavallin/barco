@@ -2,7 +2,6 @@
 debug ?= 0
 SRC_DIR := ./src
 BUILD_DIR := ./build
-INCLUDE_DIR := ./include
 LIB_DIR := ./lib
 TESTS_DIR := ./tests
 BIN_DIR := ./bin
@@ -22,7 +21,7 @@ LIB_LOG_PATH := $(LIB_DIR)/log/log.c
 LIB_LOG_FLAGS := -DLOG_USE_COLOR
 
 # Barco object files
-OBJS := $(BARCO).o cgroups.o container.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
+OBJS := $(BARCO).o cgroups.o container.o mount.o security.o userns.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
 
 # Compiler settings
 CC := clang-18 --config ./clang.cfg
@@ -60,11 +59,11 @@ test: dir
 
 # Run linter on source directories
 lint:
-	@$(LINTER) --config-file=./.clang-tidy $(SRC_DIR)/* $(INCLUDE_DIR)/* $(TESTS_DIR)/* --
+	@$(LINTER) --config-file=./.clang-tidy $(SRC_DIR)/* $(TESTS_DIR)/* --
 
 # Run formatter on source directories
 format:
-	@$(FORMATTER) -style=file -i $(SRC_DIR)/* $(INCLUDE_DIR)/*  $(TESTS_DIR)/*
+	@$(FORMATTER) -style=file -i $(SRC_DIR)/*  $(TESTS_DIR)/*
 
 # Run valgrind memory checker on executable
 check: $(BARCO)
