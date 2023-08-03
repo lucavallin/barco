@@ -14,9 +14,11 @@
                 "-u",
                 "0",
                 "-m",
-                ".",
+                "/",
                 "-c",
-                "/bin/bash"
+                "/bin/bash",
+                "-a",
+                ".",
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build debug"

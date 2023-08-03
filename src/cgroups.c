@@ -4,6 +4,7 @@
 #include <linux/limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -15,45 +16,49 @@ struct cgrp_control {
   } **settings;
 };
 
-struct cgrp_setting add_to_tasks = {.name = "cgroup.procs", .value = "0"};
+struct cgrp_setting add_to_tasks = {.name = "tasks", .value = "0"};
 
-// Cgroups v2 settings:
-// - memory.max: 1GB (process memory limit)
-// - cpu.weight: 256 (a quarter of the CPU time)
+// Cgroups let us limit resources allocated to a process to prevent it from
+// dying services to the rest of the system. The cgroups must be created before
+// the process enters a cgroups namespace. The following settings are applied:
+// - memory.limit_in_bytes: 1GB (process memory limit)
+// - cpu.shares: 256 (a quarter of the CPU time)
 // - pids.max: 64 (max number of processes)
 struct cgrp_control *cgrps[] = {
     &(struct cgrp_control){
         .control = "memory",
-        .settings = (struct cgrp_setting *[]){&(struct cgrp_setting){
-                                                  .name = "memory.max",
-                                                  .value = "1000000000"},
-                                              &add_to_tasks, NULL}},
+        .settings =
+            (struct cgrp_setting *[]){
+                &(struct cgrp_setting){.name = "memory.limit_in_bytes",
+                                       .value = CGROUP_MEMORY_LIMIT},
+                &add_to_tasks, NULL}},
     &(struct cgrp_control){
         .control = "cpu",
-        .settings =
-            (struct cgrp_setting *[]){
-                &(struct cgrp_setting){.name = "cpu.weight", .value = "256"},
-                &add_to_tasks, NULL}},
+        .settings = (struct cgrp_setting *[]){&(struct cgrp_setting){
+                                                  .name = "cpu.shares",
+                                                  .value = CGROUP_CPU_SHARES},
+                                              &add_to_tasks, NULL}},
     &(struct cgrp_control){
         .control = "pids",
-        .settings =
-            (struct cgrp_setting *[]){
-                &(struct cgrp_setting){.name = "pids.max", .value = "64"},
-                &add_to_tasks, NULL}},
+        .settings = (struct cgrp_setting *[]){&(struct cgrp_setting){
+                                                  .name = "pids.max",
+                                                  .value = CGROUP_PIDS_MAX},
+                                              &add_to_tasks, NULL}},
     NULL};
 
-// cgroups settings are written to the cgroups v2 filesystem as follows:
+// cgroups settings are written to the cgroups v1 filesystem as follows:
 // - create a directory for the cgroups
 // - write the settings to the cgroups files (each setting is a file)
-// - a pid can be added to cgroup.procs to add the process to the cgroups
+// - a pid can be added to tasks to add the process tree to the cgroups (pid 0
+// means the writing process)
 int cgroups_init(char *hostname) {
   log_debug("setting cgroups...");
 
   for (struct cgrp_control **cgrp = cgrps; *cgrp; cgrp++) {
     char dir[PATH_MAX] = {0};
     log_debug("setting %s...", (*cgrp)->control);
-    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", hostname,
-                 (*cgrp)->control) == -1) {
+    if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
+                 hostname) == -1) {
       log_error("failed to setup path: %m");
       return -1;
     }
@@ -92,6 +97,17 @@ int cgroups_init(char *hostname) {
   }
 
   log_debug("cgroups set");
+  log_debug("setting rlimit...");
+
+  if (setrlimit(RLIMIT_NOFILE, &(struct rlimit){
+                                   .rlim_max = CGROUPS_FD_COUNT,
+                                   .rlim_cur = CGROUPS_FD_COUNT,
+                               })) {
+    log_error("failed to setrlimit: %m");
+    return 1;
+  }
+
+  log_debug("strlimit set");
   return 0;
 }
 
@@ -110,7 +126,7 @@ int cgroups_free(char *hostname) {
     log_debug("freeing %s...", (*cgrp)->control);
     if (snprintf(dir, sizeof(dir), "/sys/fs/cgroup/%s/%s", (*cgrp)->control,
                  hostname) == -1 ||
-        snprintf(task, sizeof(task), "/sys/fs/cgroup/%s/cgroup.procs",
+        snprintf(task, sizeof(task), "/sys/fs/cgroup/%s/tasks",
                  (*cgrp)->control) == -1) {
       log_error("failed to setup paths: %m");
       return -1;

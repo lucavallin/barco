@@ -1,18 +1,14 @@
 # <img src="./docs/barco.png" style="width:40px;padding-right:10px;margin-bottom:-8px;"> barco
 
 `barco` is a project I worked on to learn more about Linux containers and the Linux kernel, based on other guides on the internet.
-`barco` enforces a minimal set of restrictions to run untrusted code, which is not recommended for production use, where a more robust solution should be used.
-Some permissions however are absolutely not safe, and those are enforced by `barco`.
+`barco` enforces a minimal set of restrictions to run untrusted code, which is not recommended for production use, where a more robust solution should be used. Some permissions however are absolutely not safe, and those are enforced by `barco`.
 
 Linux containers are made up by a set of Linux kernel features:
 
-- `namespaces`: are used to group kernel objects into different sets that can be accessed by specific process trees. There are different types
-of `namespaces`, for example,the `PID` namespace is used to isolate the process tree, while the `network` namespace is used to isolate the network stack.
-- `capabilities`: are used to set limits on what uid 0 (root) can do.
-- `cgroups`: are used to limit the resources (e.g. memory, disk I/O, CPU-tme) that a process can use.
-
-Settings for `seccomp` and `capabilities` are handled via system calls, while `cgroups` are handled via the `cgroupfs` virtual file system. The scope of each of these features is somewhat unclear, and there is some overlap between them. The feature `user namespaces` should
-help with this, but it is not available on all systems as it can be a security risk. `barco` tries to prevent nested `user namespaces` and only uses the feature if available.
+- `namespaces`: are used to group kernel objects into different sets that can be accessed by specific process trees. There are different types of `namespaces`, for example,the `PID` namespace is used to isolate the process tree, while the `network` namespace is used to isolate the network stack.
+- `seccomp`: is used to limit the system calls that a process can make (handled via syscalls)
+- `capabilities`: are used to set limits on what uid 0 (root) can do (handled via syscalls)
+- `cgroups`: are used to limit the resources (e.g. memory, disk I/O, CPU-tme) that a process can use (handled via cgroupfs)
 
 ## Usage
 
@@ -46,7 +42,6 @@ i am in a container
 ## Setup
 
 `barco` requires a number of tools and libraries to be installed to build the project and for development.
-`barco` relies on low-level Linux features, so it must be run on a Linux system. I found [getutm.app](https://getutm.app) to work well with [Debian](http://debian.org) on my Mac.
 
 ```bash
 # Install required tooling
@@ -157,6 +152,10 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Improvements
 
-- Add support for `cgroupsv2`. `cgroupsv2` is the new version of `cgroups` and is not yet supported by `barco`.
+- The code to handle mounts and user namespaces seems overly complicated and should be simplified. Are there new Linux features that can be used?
+- The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic
 - CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.
-- The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic.
+
+- Assume user namespaces exist, add flag to clone?
+- Finish cgroupsv2
+- Recover VSCode guide in README
