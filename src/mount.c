@@ -54,15 +54,12 @@ int mount_set(char *mnt) {
     return -1;
   }
 
-  log_debug("pivot root preparation done");
-
   log_debug("pivot root with %s, %s...", mount_dir, inner_mount_dir);
   if (pivot_root(mount_dir, inner_mount_dir)) {
     log_error("failed to pivot root with %s, %s: %m", mount_dir,
               inner_mount_dir);
     return -1;
   }
-  log_debug("pivot root done");
 
   log_debug("unmounting old root...");
   char *old_root_dir = basename(inner_mount_dir);

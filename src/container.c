@@ -92,6 +92,8 @@ int container_wait(int container_pid) {
 
 void container_stop(int container_pid) {
   log_debug("calling kill for container_pid %d...", container_pid);
-  kill(container_pid, SIGKILL);
+  if (kill(container_pid, SIGKILL)) {
+    log_error("failed to kill container_pid %d: %m", container_pid);
+  }
   log_debug("container_pid %d killed", container_pid);
 }

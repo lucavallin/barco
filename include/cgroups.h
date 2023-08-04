@@ -1,14 +1,17 @@
 #ifndef CGROUPS_H
 #define CGROUPS_H
 
+#include <fcntl.h>
+
 // Used for cgroups limits initialization
-#define CGROUP_MEMORY_LIMIT "1073741824"
-#define CGROUP_CPU_SHARES "256"
-#define CGROUP_PIDS_MAX "64"
-enum { CGROUPS_FD_COUNT = 64, CGROUPS_CONTROL_FIELD_SIZE = 256 };
+#define CGROUPS_MEMORY_MAX "1G"
+#define CGROUPS_CPU_WEIGHT "256"
+#define CGROUPS_PIDS_MAX "64"
+#define CGROUPS_CGROUP_PROCS "cgroup.procs"
+enum { CGROUPS_CONTROL_FIELD_SIZE = 256 };
 
 // Initializes cgroups for the hostname
-int cgroups_init(char *hostname);
+int cgroups_init(char *hostname, pid_t pid);
 // Cleans up cgroups for the hostname
 int cgroups_free(char *hostname);
 

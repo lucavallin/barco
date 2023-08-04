@@ -21,7 +21,10 @@
                 ".",
             ],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "build debug"
+            "preLaunchTask": "build debug",
+            "sourceLanguages": [
+                "c"
+            ]
         }
     ]
 }

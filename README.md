@@ -12,31 +12,35 @@ Linux containers are made up by a set of Linux kernel features:
 
 ## Usage
 
-`barco` can be used to run `bin/sh` from the `/` directory as `root`:
+`barco` can be used to run `bin/sh . ` from the `/` directory as `root` with verbose output with the following command:
 
 ```bash
-$ sudo ./bin/barco -u 0 -m / -c /usr/bin/sh
+$ sudo ./bin/barco -u 0 -m / -c /usr/bin/sh -a . [-v]
 
-23:21:12 INFO /erc/barco.c:90: initializing socket pair...
-23:21:12 INFO /sre/barco.c:97: setting socket flags...
-28:21:12 INFO /sre/barco.c:107: initializing container stack...
-28:21:12 INFO /src/barco.c:116: initializing groups...
-23:21:12 INFO /src/barco.c:126: initializing container...
-28:21:12 INFO /src/barco.c:136: updating map...
-28:21:12 INFO /src/barco.c:144: waiting for container to exit...
-23:21:12 INFO /src/container.c:360: ### BARCONTAINER STARTING - type 'exit' to quit ###
+22:08:41 INFO  ./src/barco.c:96: initializing socket pair...
+22:08:41 INFO  ./src/barco.c:103: setting socket flags...
+22:08:41 INFO  ./src/barco.c:112: initializing container stack...
+22:08:41 INFO  ./src/barco.c:120: initializing container...
+22:08:41 INFO  ./src/barco.c:131: initializing cgroups...
+22:08:41 INFO  ./src/cgroups.c:73: setting memory.max to 1G...
+22:08:41 INFO  ./src/cgroups.c:73: setting cpu.weight to 256...
+22:08:41 INFO  ./src/cgroups.c:73: setting pids.max to 64...
+22:08:41 INFO  ./src/cgroups.c:73: setting cgroup.procs to 1458...
+22:08:41 INFO  ./src/barco.c:139: configuring user namespace...
+22:08:41 INFO  ./src/barco.c:147: waiting for container to exit...
+22:08:41 INFO  ./src/container.c:43: ### BARCONTAINER STARTING - type 'exit' to quit ###
 
 # ls
 bin         home                lib32       media       root        sys         vmlinuz
 boot        initrd.img          lib64       mnt         run         tmp         vmlinuz.old
 dev         initrd.img.old      libx32      opt         sbin        usr
 etc         lib                 lost+found  proc        srv         var
-# echo "i am in a container"
-i am in a container
+# echo "i am a container"
+i am a container
 # exit
 
-23:24:23 INFO /src/barco.c:150: cleaning up...
-28:24:23 INFO /sre/barco.c:164: so long and thanks for all the fish
+22:08:55 INFO  ./src/barco.c:153: freeing resources...
+22:08:55 INFO  ./src/barco.c:168: so long and thanks for all the fish
 ```
 
 ## Setup
@@ -44,7 +48,7 @@ i am in a container
 `barco` requires a number of tools and libraries to be installed to build the project and for development.
 
 ```bash
-# Install required tooling
+# Install all required tooling and dependencies
 $ sudo apt install -y make
 $ make setup
 ```
@@ -60,19 +64,12 @@ $ make setup
 - [argtable](http://argtable.org/): used to parse command line arguments
 - [rxi/log.c](https://github.com/rxi/log.c): used for logging
 
-`barco` uses the following LLVM-18-based tools for development:
-
-- `clang` is the compiler of choice.
-- `clangd` is used to provide code completion and navigation.
-- `clang-tidy` is used to lint the code.
-- `clang-format` is used to format the code.
-- `valgrind` is used to check for memory leaks.
+`barco` uses a number of LLVM-18-based tools for development, linting, formatting, debugging and checking for memory leaks.
 
 ## Build
 
 The included `Makefile` provides a few targets to build `barco`.
-The variable `debug=1` can be set to run any of the targets in "debug" mode, which builds the project with the with debug symbols and without optimizations.
-The debug build is especially useful for the debugger and valgrind.
+The variable `debug=1` can be set to run any of the targets in "debug" mode, which builds the project with the with debug symbols and without optimizations. The debug build is especially useful for the debugger and valgrind.
 
 ```bash
 # Build barco (executable is in bin/)
@@ -86,6 +83,8 @@ $ make debug=1
 
 ## Development
 `barco` is developed using [Visual Studio Code](https://code.visualstudio.com/) and [GitHub Codespaces](https://github.com/codespaces). The repository contains all the necessary configuration files to use these tools effectively.
+`barco` relies on low-level Linux features, so it must be run on a Linux system. [GitHub Codespaces](https://github.com/codespaces) acts weird at times when tweaking low-level container settings: I found [getutm.app](https://getutm.app) to work well with [Debian](http://debian.org) on my Mac when in doubt.
+
 The included `Makefile` provides a few targets useful for development:
 
 ```bash
@@ -105,7 +104,7 @@ $ make check
 $ make clean
 ```
 
-Furthermore, the project includes a [Visual Studio Code](https://code.visualstudio.com/) configuration in `.vscode/` that can be used to run the built-in debugger.
+Furthermore, the project includes a [Visual Studio Code](https://code.visualstudio.com/) configuration in `.vscode/` that can be used to run the built-in debugger (at this moment it is "disabled" since `barco` should be run as `root` and [Visual Studio Code](https://code.visualstudio.com/) does not have that option).
 
 ## Structure
 
@@ -141,6 +140,8 @@ In the future, suitable tools for automated testing and documentation might be a
 
 ## Limitations
 
+`barco` assumes that the host system is running a Linux kernel at version 6.0.x or higher and with user namespaces and cgroupsv2 enabled. The project has been tested on Debian 13.
+
 `barco` does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
 
 - create a new network namespace
@@ -153,7 +154,6 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Improvements
 
-- This project uses cgroupsv1, which is old fashioned and should be replaced with cgroupsv2.
-- The code to handle mounts and user namespaces seems overly complicated and should be simplified. Are there new Linux features that can be used?
+- Investigate further, document and refactor: user and mount and cgroup namespaces, syscalls and capabilities
 - The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic
 - CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.

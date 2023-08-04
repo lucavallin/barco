@@ -84,6 +84,11 @@ int main(int argc, char **argv) {
   config.arg = (char *)arg->sval[0];
   config.mnt = (char *)mnt->sval[0];
 
+  // Check if barco is running as root
+  if (geteuid() != 0) {
+    log_warn("barco should be run as root");
+  }
+
   // Set hostname for the container to "barcontainer"
   config.hostname = "barcontainer";
 
@@ -111,14 +116,6 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
-  // Prepare cgroups for the process (the container is a child process of barco)
-  log_info("initializing cgroups...");
-  if (cgroups_init(config.hostname)) {
-    log_fatal("failed to initialize cgroups");
-    exitcode = 1;
-    goto cleanup;
-  }
-
   // Initialize the container (calls clone() internally).
   log_info("initializing container...");
   // Stacks on most architectures grow downwards.
@@ -130,12 +127,20 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
+  // Prepare cgroups for the process (the container is a child process of barco)
+  log_info("initializing cgroups...");
+  if (cgroups_init(config.hostname, container_pid)) {
+    log_fatal("failed to initialize cgroups");
+    exitcode = 1;
+    goto cleanup;
+  }
+
   // Barco configures the user namespace for the container
   log_info("configuring user namespace...");
-  if (user_namespace_set_user(container_pid, sockets[0])) {
+  if (user_namespace_prepare_mappings(container_pid, sockets[0])) {
     exitcode = 1;
     log_fatal("failed to user_namespace_set_user, stopping container...");
-    container_stop(container_pid);
+    goto cleanup;
   }
 
   // Wait for the container to exit
@@ -146,8 +151,6 @@ int main(int argc, char **argv) {
 cleanup:
   // Clear resources (cgroups, stack, sockets)
   log_info("freeing resources...");
-  log_debug("freeing cgroup...");
-  cgroups_free(config.hostname);
 
   log_debug("freeing stack...");
   free(stack);
@@ -155,6 +158,9 @@ cleanup:
   log_debug("freeing sockets...");
   close(sockets[0]);
   close(sockets[1]);
+
+  log_debug("freeing cgroups...");
+  cgroups_free(config.hostname);
 
 exit:
   log_debug("freeing argtable...");

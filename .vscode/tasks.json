@@ -6,12 +6,11 @@
         {
             "label": "build debug",
             "type": "shell",
-            "command": "make debug=1"
-        },
-        {
-            "label": "build",
-            "type": "shell",
-            "command": "make"
+            "command": "make debug=1",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

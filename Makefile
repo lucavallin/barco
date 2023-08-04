@@ -10,8 +10,8 @@ BIN_DIR := ./bin
 # Executable settings
 BARCO := barco
 BARCO_ARGS_0 := --help
-BARCO_ARGS_1 := -u 0 -m / -c "/usr/bin/sh && exit" -a .
-BARCO_ARGS_2 := -u 0 -m / -c "/usr/bin/sh && exit" -a . -v
+BARCO_ARGS_1 := -u 0 -m / -c "/bin/bash -c" -a exit
+BARCO_ARGS_2 := -u 0 -m / -c "/bin/bash -c" -a exit -v
 
 # Libraries settings
 LIB_ARGTABLE_REPO := https://github.com/argtable/argtable3/releases/download/v3.2.2.f25c624/argtable-v3.2.2.f25c624-amalgamation.tar.gz
@@ -72,9 +72,9 @@ format:
 
 # Run valgrind memory checker on executable
 check: $(BARCO)
-	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_0)
-	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_1)
-	@valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_2)
+	@sudo valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_0)
+	@sudo valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_1)
+	@sudo valgrind -s --leak-check=full --show-leak-kinds=all $(BIN_DIR)/$(BARCO) $(BARCO_ARGS_2)
 
 # Setup dependencies for build and development
 setup:
