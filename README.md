@@ -85,6 +85,7 @@ $ make debug=1
 ```
 
 ## Development
+`barco` is developed using [Visual Studio Code](https://code.visualstudio.com/) and [GitHub Codespaces](https://github.com/codespaces). The repository contains all the necessary configuration files to use these tools effectively.
 The included `Makefile` provides a few targets useful for development:
 
 ```bash
@@ -152,10 +153,7 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 
 ## Improvements
 
+- This project uses cgroupsv1, which is old fashioned and should be replaced with cgroupsv2.
 - The code to handle mounts and user namespaces seems overly complicated and should be simplified. Are there new Linux features that can be used?
 - The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic
 - CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.
-
-- Assume user namespaces exist, add flag to clone?
-- Finish cgroupsv2
-- Recover VSCode guide in README
