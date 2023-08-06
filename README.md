@@ -156,7 +156,7 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 - The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic
 - CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.
 
-### Credits
+## Credits
 
 Some of the resources that have been used to develop `barco` are:
 
