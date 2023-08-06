@@ -155,3 +155,17 @@ In C this is usually done via the `rtnetlink` interface. Furthermore, network us
 - Investigate further, document and refactor: user and mount and cgroup namespaces, syscalls and capabilities
 - The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic
 - CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.
+
+### Credits
+
+Some of the resources that have been used to develop `barco` are:
+
+- [Linux kernel documentation](https://www.kernel.org/doc/html/latest/index.html)
+- [user_namespaces docs](https://man7.org/linux/man-pages/man7/user_namespaces.7.html)
+- [cgroup_namespaces docs](https://man7.org/linux/man-pages/man7/cgroup_namespaces.7.html)
+- [mount_namespaces docs](https://man7.org/linux/man-pages/man7/mount_namespaces.7.html)
+- [Linux containers in 500 lines of code](https://blog.lizzie.io/linux-containers-in-500-loc.html#fn.6)
+- [Containers from scratch](https://medium.com/inside-sumup/containers-from-scratch-part-1-b719effd1e0a)
+- [The current adoption status of cgroup v2 in containers](https://medium.com/nttlabs/cgroup-v2-596d035be4d7)
+- [Docker under the Hood](https://medium.com/devops-dudes/docker-under-the-hood-0-naming-components-and-runtime-9a89cfbbe783)
+- [A deep dive into Linux namespaces](https://ifeanyi.co/posts/linux-namespaces-part-1/)
