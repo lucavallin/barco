@@ -1,8 +1,6 @@
 # <img src="./docs/barco.png" style="width:40px;padding-right:10px;margin-bottom:-8px;"> barco
 
 `barco` is a project I worked on to learn more about Linux containers and the Linux kernel, based on other guides on the internet.
-`barco` enforces a minimal set of restrictions to run untrusted code, which is not recommended for production use, where a more robust solution should be used. Some permissions however are absolutely not safe, and those are enforced by `barco`.
-
 Linux containers are made up by a set of Linux kernel features:
 
 - `namespaces`: are used to group kernel objects into different sets that can be accessed by specific process trees. There are different types of `namespaces`, for example,the `PID` namespace is used to isolate the process tree, while the `network` namespace is used to isolate the network stack.
