@@ -10,10 +10,10 @@ Linux containers are made up by a set of Linux kernel features:
 
 ## Usage
 
-`barco` can be used to run `bin/sh . ` from the `/` directory as `root` with verbose output with the following command:
+`barco` can be used to run `bin/sh . ` from the `/` directory as `root` (-u 0) with verbose output with the following command:
 
 ```bash
-$ sudo ./bin/barco -u 0 -m / -c /usr/bin/sh -a . [-v]
+$ sudo ./bin/barco -u 0 -m / -c /bin/sh -a . -v
 
 22:08:41 INFO  ./src/barco.c:96: initializing socket pair...
 22:08:41 INFO  ./src/barco.c:103: setting socket flags...
@@ -62,12 +62,12 @@ $ make setup
 - [argtable](http://argtable.org/): used to parse command line arguments
 - [rxi/log.c](https://github.com/rxi/log.c): used for logging
 
-`barco` uses a number of LLVM-18-based tools for development, linting, formatting, debugging and checking for memory leaks.
+`barco` uses a number of LLVM-18-based tools for development, linting, formatting, debugging and Valgrind to check for memory leaks.
 
 ## Build
 
 The included `Makefile` provides a few targets to build `barco`.
-The variable `debug=1` can be set to run any of the targets in "debug" mode, which builds the project with the with debug symbols and without optimizations. The debug build is especially useful for the debugger and valgrind.
+The variable `debug=1` can be set to run any of the targets in "debug" mode, which builds the project with debug symbols and without optimizations (especially useful for the debugger and valgrind).
 
 ```bash
 # Build barco (executable is in bin/)
@@ -102,7 +102,7 @@ $ make check
 $ make clean
 ```
 
-Furthermore, the project includes a [Visual Studio Code](https://code.visualstudio.com/) configuration in `.vscode/` that can be used to run the built-in debugger (at this moment it is "disabled" since `barco` should be run as `root` and [Visual Studio Code](https://code.visualstudio.com/) does not have that option).
+Furthermore, the project includes a [Visual Studio Code](https://code.visualstudio.com/) configuration in `.vscode/` that can be used to run the built-in debugger (at this moment it is "disabled" since `barco` should be run as `root` and [CodeLLDB](https://github.com/vadimcn/codelldb) does not have that option).
 
 ## Structure
 
