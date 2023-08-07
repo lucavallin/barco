@@ -10,10 +10,10 @@ Linux containers are made up by a set of Linux kernel features:
 
 ## Usage
 
-`barco` can be used to run `bin/sh . ` from the `/` directory as `root` (-u 0) with verbose output with the following command:
+`barco` can be used to run `bin/sh . ` from the `/` directory as `root` (-u 0) with the following command (optional `-v` for verbose output):
 
 ```bash
-$ sudo ./bin/barco -u 0 -m / -c /bin/sh -a . -v
+$ sudo ./bin/barco -u 0 -m / -c /bin/sh -a . [-v]
 
 22:08:41 INFO  ./src/barco.c:96: initializing socket pair...
 22:08:41 INFO  ./src/barco.c:103: setting socket flags...
