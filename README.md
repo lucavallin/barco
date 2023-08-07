@@ -172,5 +172,5 @@ Some of the resources that have been used to develop `barco` are:
 
 ## FAQ
 - **Why C?** I haven't written much C since college and nostalgia got me.
-- **What does "barco" mean?** It's [Venetian](https://vec.wikipedia.org/wiki/Barco) (my native language) for hay barrack.
+- **What does "barco" mean?** It's [Venetian](https://vec.wikipedia.org/wiki/Barco) (my native language) for "hay barrack".
 - **Nice logo, did you design it yourself?** Kind of, I asked Midjourney to come up with some designs.
