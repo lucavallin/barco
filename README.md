@@ -169,3 +169,8 @@ Some of the resources that have been used to develop `barco` are:
 - [The current adoption status of cgroup v2 in containers](https://medium.com/nttlabs/cgroup-v2-596d035be4d7)
 - [Docker under the Hood](https://medium.com/devops-dudes/docker-under-the-hood-0-naming-components-and-runtime-9a89cfbbe783)
 - [A deep dive into Linux namespaces](https://ifeanyi.co/posts/linux-namespaces-part-1/)
+
+## FAQ
+- **Why C?** I haven't written much C since college and nostalgia got me.
+- **What does "barco" mean?** It's [Venetian](https://vec.wikipedia.org/wiki/Barco)https://vec.wikipedia.org/wiki/Barco (my native language) for hay barrack.
+- **Nice logo, did you design it yourself?** Kind of, I asked Midjourney to come up with some designs.
