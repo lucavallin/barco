@@ -80,7 +80,7 @@ check: $(BARCO)
 setup:
 	# Update apt and upgrade packages
 	@sudo apt update
-	@sudo apt upgrade -y
+	@sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y
 
 	# Install OS dependencies
 	@sudo apt install -y bash libarchive-tools lsb-release wget software-properties-common gnupg
