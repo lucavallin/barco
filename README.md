@@ -138,7 +138,7 @@ In the future, suitable tools for automated testing and documentation might be a
 
 ## Limitations
 
-`barco` assumes that the host system is running a Linux kernel at version 6.0.x or higher and with user namespaces and cgroupsv2 enabled. The project has been tested on Debian 13.
+`barco` assumes that the host system is running a Linux kernel at version 6.0.x or higher and with user namespaces and cgroupsv2 enabled. The project has been tested on Debian 12.
 
 `barco` does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
 
