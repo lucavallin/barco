@@ -44,7 +44,9 @@ int container_start(void *arg) {
   // argv must be NULL terminated
   char *argv[] = {config->cmd, config->arg, NULL};
   if (execve(config->cmd, argv, NULL)) {
-    log_error("failed to execve '%s %s': %m", config->cmd, argv);
+    log_error("failed to execve '%s%s%s': %m", config->cmd,
+              config->arg == NULL ? "" : " ",
+              config->arg == NULL ? "" : config->arg);
     return -1;
   }
   log_debug("container started...");
