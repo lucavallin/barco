@@ -1,4 +1,4 @@
-# <img src="/docs/barco.png" style="width:40px;padding-right:10px;margin-bottom:-8px;"> barco
+# <img src="https://github.com/lucavallin/barco/blob/main/docs/barco.png" style="width:40px;padding-right:10px;margin-bottom:-8px;"> barco
 
 `barco` is a project I worked on to learn more about Linux containers and the Linux kernel, based on other guides on the internet.
 Linux containers are made up by a set of Linux kernel features:
