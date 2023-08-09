@@ -118,13 +118,12 @@ The project is structured as follows:
 ├── lib                 third-party libraries
 ├── scripts             scripts for setup and other tasks
 ├── src                 C source files
-│   ├── barco.c         (main)
+│   ├── barco.c         (main) Entry point for the CLI
 │   └── *.c
 ├── tests               contains tests
-├── .clang-format       configuration for clang-format
-├── .cang-tidy          configuration for clang-tidy
+├── .clang-format       configuration for the formatter
+├── .clang-tidy         configuration for the linter
 ├── .gitignore
-├── .clang.cfg          configuration for the compiler
 ├── LICENSE
 ├── Makefile
 └── README.md
@@ -152,7 +151,7 @@ In the future, suitable tools for automated testing and documentation might be a
 ## Improvements
 
 - Investigate further, document and refactor: user and mount and cgroup namespaces, syscalls and capabilities
-- The functions in `cgroups.c`, `mount.c`, `sec.c`, `userns.c` are specific to `barco` and should be made more generic
+- The functions in `cgroups.c`, `mount.c`, `sec.c`, `user.c` are specific to `barco` and should be made more generic
 - CMake and Conan are industry standards, so they should be used eventually instead of Make and the current build system. Unfortunately, CMake and Conan also add a lot of complexity which is not needed at this time.
 
 ## Credits

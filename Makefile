@@ -28,38 +28,52 @@ LIB_LOG_FLAGS := -DLOG_USE_COLOR
 OBJS := $(BARCO).o cgroups.o container.o mount.o sec.o user.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
 
 # Compiler settings
-CC_INCLUDE_FLAGS := -I$(INCLUDE_DIR) -I$(LIB_ARGTABLE_DIR) -I$(LIB_LOG_DIR)
-CC := clang-18 --config ./clang.cfg $(CC_INCLUDE_FLAGS)
+CC := clang-18
 LINTER := clang-tidy-18
 FORMATTER := clang-format-18
 DEBUGGER := lldb-18
 DISASSEMBLER := llvm-objdump-18
 
-# Debug Settings
+# Compiler and Linker flags Settings:
+# 	-std=gnu17: Use the GNU17 standard
+# 	-D _GNU_SOURCE: Use GNU extensions
+# 	-D __STDC_WANT_LIB_EXT1__: Use C11 extensions
+# 	-Wall: Enable all warnings
+# 	-Wextra: Enable extra warnings
+# 	-pedantic: Enable pedantic warnings
+# 	-I$(INCLUDE_DIR): Include the include directory
+# 	-I$(LIB_ARGTABLE_DIR): Include the argtable library directory
+# 	-I$(LIB_LOG_DIR): Include the log library directory
+# 	-lcap: Link to libcap
+# 	-lseccomp: Link to libseccomp
+# 	-lm: Link to libm
+CFLAGS := -std=gnu17 -D _GNU_SOURCE -D __STDC_WANT_LIB_EXT1__ -Wall -Wextra -pedantic -I$(INCLUDE_DIR) -I$(LIB_ARGTABLE_DIR) -I$(LIB_LOG_DIR)
+LFLAGS := -lcap -lseccomp -lm
+
 ifeq ($(debug), 1)
-	CC := $(CC) -g -O0
+	CFLAGS := $(CFLAGS) -g -O0
 else
-	CC := $(CC) -Oz
+	CFLAGS := $(CFLAGS) -Oz
 endif
 
 # Targets
 
 # Build barco executable
 $(BARCO): format lint dir $(OBJS)
-	$(CC) -o $(BIN_DIR)/$(BARCO) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file))
+	$(CC) $(CFLAGS) $(LFLAGS) -o $(BIN_DIR)/$(BARCO) $(foreach file,$(OBJS),$(BUILD_DIR)/$(file))
 
 # Build object files
 %.o: dir $(SRC_DIR)/%.c
-	@$(CC) -o $(BUILD_DIR)/$*.o -c $(SRC_DIR)/$*.c
+	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$*.o -c $(SRC_DIR)/$*.c
 # Build third-party libraries
 $(LIB_ARGTABLE_NAME).o: dir $(LIB_ARGTABLE_SRC)
-	@$(CC) -o $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o -c $(LIB_ARGTABLE_SRC)
+	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o -c $(LIB_ARGTABLE_SRC)
 $(LIB_LOG_NAME).o: dir $(LIB_ARGTABLE_SRC)
-	@$(CC) -o $(BUILD_DIR)/$(LIB_LOG_NAME).o -c $(LIB_LOG_SRC) $(LIB_LOG_FLAGS)
+	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(LIB_LOG_NAME).o -c $(LIB_LOG_SRC) $(LIB_LOG_FLAGS)
 
 # Run CUnit tests
 test: dir
-	@$(CC) -lcunit -o $(BIN_DIR)/$(BARCO)_test $(TESTS_DIR)/$(BARCO)_test.c
+	@$(CC) $(CFLAGS) -lcunit -o $(BIN_DIR)/$(BARCO)_test $(TESTS_DIR)/$(BARCO)_test.c
 	@$(BIN_DIR)/$(BARCO)_test
 
 # Run linter on source directories
