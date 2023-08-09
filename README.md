@@ -137,17 +137,17 @@ In the future, suitable tools for automated testing and documentation might be a
 
 ## Limitations
 
-`barco` assumes that the host system is running a Linux kernel at version 6.0.x or higher and with user namespaces and cgroupsv2 enabled. The project has been tested on Debian 12.
+1. `barco` has been tested on Debian 12, running the Linux kernel at version 6.1.0, with user namespaces and cgroupsv2 enabled.
 
-`barco` does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
+2. `barco` does not handle network namespaces, so the container cannot access the network. Networking can roughly be setup as follows:
 
-- create a new network namespace
-- create a virtual ethernet pair
-- move one end of the pair to the new network namespace
-- assign an IP address to the interface in the new network namespace
-- setup routing and NAT
+   - create a new network namespace
+   - create a virtual ethernet pair
+   - move one end of the pair to the new network namespace
+   - assign an IP address to the interface in the new network namespace
+   - setup routing and NAT
 
-In C this is usually done via the `rtnetlink` interface. Furthermore, network usage can be limited with the `net_prio` cgroup controller.
+    In C this is usually done via the `rtnetlink` interface. Furthermore, network usage can be limited with the `net_prio` cgroup controller.
 
 ## Improvements
 
@@ -170,6 +170,7 @@ Some of the resources that have been used to develop `barco` are:
 - [A deep dive into Linux namespaces](https://ifeanyi.co/posts/linux-namespaces-part-1/)
 
 ## FAQ
+
 - **Why C?** I haven't written much C since college and nostalgia got me.
 - **What does "barco" mean?** It's [Venetian](https://vec.wikipedia.org/wiki/Barco) (my native language) for "hay barrack".
 - **Nice logo, did you design it yourself?** Kind of, I asked Midjourney to come up with some designs.
