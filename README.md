@@ -57,7 +57,6 @@ $ make setup
 
 - `libseccomp`: used to set up seccomp filters
 - `libcap`: used to set container capabilities
-- `libbsd`: used for `strlcpy`
 - `libcuni1`: used for testing with CUnit
 - [argtable](http://argtable.org/): used to parse command line arguments
 - [rxi/log.c](https://github.com/rxi/log.c): used for logging

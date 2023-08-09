@@ -95,7 +95,7 @@ setup:
 	@sudo apt install -y clang-format-18 clang-tidy-18 clang-tools clangd valgrind
 
 	# Install non-standard system libraries
-	@sudo apt install -y libseccomp-dev libcap-dev libbsd-dev
+	@sudo apt install -y libseccomp-dev libcap-dev
 
 	# Install CUnit testing framework
 	@sudo apt install -y libcunit1 libcunit1-doc libcunit1-dev

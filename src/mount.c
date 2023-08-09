@@ -1,6 +1,6 @@
 #include "mount.h"
 #include "log.h"
-#include <bsd/string.h>
+#include <assert.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,7 +64,8 @@ int mount_set(char *mnt) {
   log_debug("unmounting old root...");
   char *old_root_dir = basename(inner_mount_dir);
   char old_root[sizeof(inner_mount_dir) + 1] = {"/"};
-  strlcpy(&old_root[1], old_root_dir, sizeof(old_root));
+  char *end = memccpy(&old_root[1], old_root_dir, '\0', sizeof old_root - 1);
+  assert(end != NULL); // truncation shouldn't occur
 
   log_debug("changing directory to /...");
   if (chdir("/")) {
