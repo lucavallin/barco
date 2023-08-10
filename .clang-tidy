@@ -1,13 +1,5 @@
 ---
-ExtraArgs:
-  [
-    "-std=gnu17",
-    "-D _GNU_SOURCE 1",
-    "-D __STDC_WANT_LIB_EXT1__",
-    "-I./include",
-    "-I./lib/log",
-    "-I./lib/argtable",
-  ]
+ExtraArgs: []
 HeaderFileExtensions:
   - h
 HeaderFilterRegex: "./include/*"

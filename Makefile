@@ -78,7 +78,7 @@ test: dir
 
 # Run linter on source directories
 lint:
-	@$(LINTER) --config-file=.clang-tidy $(SRC_DIR)/* $(INCLUDE_DIR)/* $(TESTS_DIR)/* --
+	@$(LINTER) --config-file=.clang-tidy $(SRC_DIR)/* $(INCLUDE_DIR)/* $(TESTS_DIR)/* -- $(CFLAGS)
 
 # Run formatter on source directories
 format:
