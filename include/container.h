@@ -14,7 +14,8 @@ typedef struct {
   int fd;
   char *hostname;
   char *cmd;
-  char *arg;
+  char **arg;
+  int arg_length;
   char *mnt;
 } container_config;
 

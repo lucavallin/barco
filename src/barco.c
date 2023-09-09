@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
                      "directory to mount as root in the container"),
       cmd =
           arg_strn("c", "cmd", "<s>", 1, 1, "command to run in the container"),
-      arg =
-          arg_strn("a", "arg", "<s>", 0, 1, "argument to pass to the command"),
+      arg = arg_strn("a", "arg", "<s>", 0, 2097152, // check it by `getconf _POSIX_ARG_MAX`
+                     "argument to pass to the command"),
       vrb = arg_litn("v", "verbosity", 0, 1, "verbose output"),
       end = arg_end(ARGTABLE_ARG_MAX),
   };
@@ -81,7 +81,8 @@ int main(int argc, char **argv) {
   }
 
   config.cmd = (char *)cmd->sval[0];
-  config.arg = arg->count > 0 ? (char *)arg->sval[0] : NULL;
+  config.arg = arg->count > 0 ? (char **)arg->sval : NULL;
+  config.arg_length = arg->count;
   config.mnt = (char *)mnt->sval[0];
 
   // Check if barco is running as root

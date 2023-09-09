@@ -13,6 +13,8 @@
 #include <time.h>
 #include <unistd.h>
 
+char *join_strings(const char *strings[], int start, int end);
+
 // This is the function that will be called by clone() to start the container.
 // The order of the operations is of important as, for example,
 // mounts cannot be changed without specific capabilities,
@@ -38,18 +40,43 @@ int container_start(void *arg) {
     return -1;
   }
 
-  log_debug("executing command '%s %s' from directory '%s' in container...",
-            config->cmd, config->arg, config->mnt);
-  log_info("### BARCONTAINER STARTING - type 'exit' to quit ###");
+  int exit = 0;
+
+  char **argv = malloc((config->arg_length + 2 * sizeof(char *)));
+  if (argv == NULL) {
+    log_error("failed to allocate memory for argv: %m");
+    return -1;
+  }
+  int argv_print_length = 0;
+  argv[0] = config->cmd;
+  for (int i = 0; i < config->arg_length; i++) {
+    argv[i + 1] = config->arg[i];
+    argv_print_length += strlen(config->arg[i]) + 1;
+  }
   // argv must be NULL terminated
-  char *argv[] = {config->cmd, config->arg, NULL};
+  argv[config->arg_length + 1] = NULL;
+  char *argv_echo_string = join_strings(argv, 1, config->arg_length);
+
+  log_debug("executing command '%s %s' from directory '%s' in container...",
+            config->cmd, argv_echo_string, config->mnt);
+  log_info("### BARCONTAINER STARTING - type 'exit' to quit ###");
+
   if (execve(config->cmd, argv, NULL)) {
     log_error("failed to execve '%s%s%s': %m", config->cmd,
               config->arg == NULL ? "" : " ",
-              config->arg == NULL ? "" : config->arg);
-    return -1;
+              config->arg == NULL ? "" : argv_print_length);
+    exit = -1;
+    goto cleanup;
   }
   log_debug("container started...");
+
+cleanup:
+  free(argv);
+  free(argv_echo_string);
+
+  if (exit == -1) {
+    return -1;
+  }
 
   return 0;
 }
@@ -98,4 +125,32 @@ void container_stop(int container_pid) {
     log_error("failed to kill container_pid %d: %m", container_pid);
   }
   log_debug("container_pid %d killed", container_pid);
+}
+
+char *join_strings(const char *strings[], int start, int end) {
+  char *separator = " ";
+  if (end <= start) {
+    return NULL;
+  }
+  int totalLength = 0;
+  for (int i = start; i <= end; i++) {
+    totalLength += strlen(strings[i]);
+  }
+  totalLength += (end - start - 1) * strlen(separator) + 1;
+
+  char *result = (char *)malloc(totalLength);
+  if (result == NULL) {
+    return NULL;
+  }
+
+  result[0] = '\0'; // Ensure the string is initially empty
+
+  for (int i = start; i <= end; i++) {
+    strcat(result, strings[i]);
+    if (i != end) {
+      strcat(result, separator);
+    }
+  }
+
+  return result;
 }
