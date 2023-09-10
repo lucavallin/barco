@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
   config.mnt = (char *)mnt->sval[0];
   config.cmd = (char *)cmd->sval[0];
   config.argc = arg->count;
+
   char **container_argv = (char **)malloc((arg->count + 2) * sizeof(char *));
   if (container_argv == NULL) {
     log_error("failed to allocate memory for argv: %m");
