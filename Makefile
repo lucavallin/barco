@@ -25,7 +25,7 @@ LIB_LOG_SRC := $(LIB_LOG_DIR)/log.c
 LIB_LOG_FLAGS := -DLOG_USE_COLOR
 
 # Barco object files
-OBJS := $(BARCO).o cgroups.o container.o mount.o sec.o user.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
+OBJS := $(BARCO).o cgroups.o container.o mount.o sec.o user.o utils.o $(LIB_ARGTABLE_NAME).o $(LIB_LOG_NAME).o
 
 # Compiler settings
 CC := clang-18

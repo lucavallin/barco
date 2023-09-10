@@ -6,8 +6,13 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#ifndef _POSIX_ARG_MAX
+#define _POSIX_ARG_MAX 255
+#endif
 
 enum {
   // ARGTABLE_ARG_MAX is the maximum number of arguments
@@ -44,7 +49,7 @@ int main(int argc, char **argv) {
                      "directory to mount as root in the container"),
       cmd =
           arg_strn("c", "cmd", "<s>", 1, 1, "command to run in the container"),
-      arg = arg_strn("a", "arg", "<s>", 0, 2097152, // check it by `getconf _POSIX_ARG_MAX`
+      arg = arg_strn("a", "arg", "<s>", 0, _POSIX_ARG_MAX,
                      "argument to pass to the command"),
       vrb = arg_litn("v", "verbosity", 0, 1, "verbose output"),
       end = arg_end(ARGTABLE_ARG_MAX),
@@ -80,10 +85,21 @@ int main(int argc, char **argv) {
     log_set_level(LOG_TRACE);
   }
 
-  config.cmd = (char *)cmd->sval[0];
-  config.arg = arg->count > 0 ? (char **)arg->sval : NULL;
-  config.arg_length = arg->count;
   config.mnt = (char *)mnt->sval[0];
+  config.cmd = (char *)cmd->sval[0];
+  config.argc = arg->count;
+  char **container_argv = (char **)malloc((arg->count + 2) * sizeof(char *));
+  if (container_argv == NULL) {
+    log_error("failed to allocate memory for argv: %m");
+    return -1;
+  }
+  container_argv[0] = config.cmd;
+  // _argv must be NULL terminated
+  container_argv[arg->count + 1] = NULL;
+  for (int i = 0; i < arg->count; i++) {
+    container_argv[i + 1] = (char *)arg->sval[i];
+  }
+  config.arg = container_argv;
 
   // Check if barco is running as root
   if (geteuid() != 0) {
@@ -152,6 +168,8 @@ int main(int argc, char **argv) {
 cleanup:
   // Clear resources (cgroups, stack, sockets)
   log_info("freeing resources...");
+
+  free((void *)container_argv);
 
   log_debug("freeing stack...");
   free(stack);

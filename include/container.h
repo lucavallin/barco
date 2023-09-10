@@ -15,7 +15,8 @@ typedef struct {
   char *hostname;
   char *cmd;
   char **arg;
-  int arg_length;
+  // argc is len(arg) - 2, the first arg is the command and the last is NULL
+  int argc;
   char *mnt;
 } container_config;
 
