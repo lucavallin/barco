@@ -4,19 +4,16 @@
 #include "log.h"
 #include "user.h"
 #include <fcntl.h>
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-#ifndef _POSIX_ARG_MAX
-#define _POSIX_ARG_MAX 255
-#endif
-
 enum {
   // ARGTABLE_ARG_MAX is the maximum number of arguments
-  ARGTABLE_ARG_MAX = 20
+  ARGTABLE_ARG_MAX = 10
 };
 
 /* global arg_xxx structs */
@@ -49,7 +46,7 @@ int main(int argc, char **argv) {
                      "directory to mount as root in the container"),
       cmd =
           arg_strn("c", "cmd", "<s>", 1, 1, "command to run in the container"),
-      arg = arg_strn("a", "arg", "<s>", 0, _POSIX_ARG_MAX,
+      arg = arg_strn("a", "arg", "<s>", 0, ARG_MAX,
                      "argument to pass to the command"),
       vrb = arg_litn("v", "verbosity", 0, 1, "verbose output"),
       end = arg_end(ARGTABLE_ARG_MAX),
