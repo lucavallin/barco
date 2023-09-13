@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// author: ChatGPT.
 char *join_strings(char *strings[], int start, int end) {
   char *separator = " ";
   if (strings == NULL || end < start) {
