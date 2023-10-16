@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
   }
 
   config.cmd = (char *)cmd->sval[0];
-  config.arg = arg->count > 0 ? (char *)arg->sval[0] : NULL;
+  config.arg = (char *)arg->sval[0];
   config.mnt = (char *)mnt->sval[0];
 
   // Check if barco is running as root
