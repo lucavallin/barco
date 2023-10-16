@@ -42,11 +42,9 @@ int container_start(void *arg) {
             config->cmd, config->arg, config->mnt);
   log_info("### BARCONTAINER STARTING - type 'exit' to quit ###");
   // argv must be NULL terminated
-  char *argv[] = {config->cmd, config->arg, NULL};
+  char *argv[] = {config->arg, NULL};
   if (execve(config->cmd, argv, NULL)) {
-    log_error("failed to execve '%s%s%s': %m", config->cmd,
-              config->arg == NULL ? "" : " ",
-              config->arg == NULL ? "" : config->arg);
+    log_error("failed to execve '%s %s': %m", config->cmd, argv);
     return -1;
   }
   log_debug("container started...");
