@@ -68,7 +68,7 @@ $(BARCO): format lint dir $(OBJS)
 # Build third-party libraries
 $(LIB_ARGTABLE_NAME).o: dir $(LIB_ARGTABLE_SRC)
 	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(LIB_ARGTABLE_NAME).o -c $(LIB_ARGTABLE_SRC)
-$(LIB_LOG_NAME).o: dir $(LIB_ARGTABLE_SRC)
+$(LIB_LOG_NAME).o: dir $(LIB_LOG_SRC)
 	@$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(LIB_LOG_NAME).o -c $(LIB_LOG_SRC) $(LIB_LOG_FLAGS)
 
 # Run CUnit tests
