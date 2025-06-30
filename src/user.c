@@ -90,7 +90,7 @@ int user_namespace_prepare_mappings(pid_t pid, int fd) {
       // The first number is the starting uid / gid of the parent
       // namespace, the second number is the starting uid / gid of the child
       // namespace, and the third number is the number of uids / gids to map.
-      // This configuration tells the kernel that the preant uid / gid 0 is
+      // This configuration tells the kernel that the parent uid / gid 0 is
       // mapped to USER_NAMESPACE_UID_CHILD_RANGE_START uid of the child
       if (dprintf(map_fd, "%d %d %d\n", USER_NAMESPACE_UID_PARENT_RANGE_START,
                   USER_NAMESPACE_UID_CHILD_RANGE_START,
